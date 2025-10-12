@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CE QR Generator</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+ body{font-family:Arial,sans-serif;background:#fff;margin:40px;text-align:center}
+ h1{font-weight:600}
+ input{margin:5px;padding:8px;width:250px;font-size:16px}
+ button{margin-top:10px;padding:10px 20px;font-size:16px;cursor:pointer}
+ #qrcode{margin-top:20px}
+</style>
+</head>
+<body>
+<h1>CE QR Generator</h1>
+<input id="first" placeholder="First Name">
+<input id="last" placeholder="Last Name">
+<input id="cert" placeholder="Certification #"><br>
+<button onclick="generateQR()">Generate QR Code</button>
+<div id="message"></div>
+<div id="qrcode"></div>
+
+<script>
+function generateQR(){
+  const f=document.getElementById('first').value.trim().toUpperCase();
+  const l=document.getElementById('last').value.trim().toUpperCase();
+  const c=document.getElementById('cert').value.trim().toUpperCase();
+  if(!f||!l||!c){alert("Please fill in all fields.");return;}
+  const codeText=`${c}${l}|${f}`;
+  document.getElementById('qrcode').innerHTML='';
+  const q=new QRCode(document.getElementById("qrcode"),{text:codeText,width:200,height:200});
+  document.getElementById('message').innerText="QR Code generated successfully ✅";
+
+  // save to localStorage
+  const saved=JSON.parse(localStorage.getItem("qrRecords")||"[]");
+  const img=q._oDrawing._elImage?.src||"";
+  saved.push({text:codeText,img:img,time:new Date().toLocaleString()});
+  localStorage.setItem("qrRecords",JSON.stringify(saved));
+}
+</script>
+</body>
+</html>
