@@ -44,19 +44,22 @@ body {
 /* ===== HEADINGS ===== */
 h1 {
   font-family: 'Oswald', sans-serif;
-  color: #ffd700;
+  color: #ff4c4c; /* red instead of yellow */
   margin-bottom: 10px;
   font-size: 1.6em;
 }
 
-p.desc { color: #ccc; font-size: 0.95em; }
+p.desc {
+  color: #ff4c4c;
+  font-size: 0.95em;
+}
 
 /* ===== LOGO ===== */
 .logo {
   width: 100px;
   border-radius: 50%;
   margin-bottom: 10px;
-  box-shadow: 0 0 8px #b22222;
+  box-shadow: 0 0 8px #ff4c4c;
 }
 
 /* ===== INPUTS & BUTTONS ===== */
@@ -89,14 +92,14 @@ button:hover {
 
 #message {
   margin-top: 10px;
-  color: #ffd700;
+  color: #ff4c4c;
   font-weight: bold;
 }
 
 /* ===== FOOTER ===== */
 footer {
   font-size: 0.8em;
-  color: #aaa;
+  color: #ff4c4c;
   margin-top: 20px;
 }
 
