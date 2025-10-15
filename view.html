@@ -3,120 +3,112 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>CE QR Generator – Admin View</title>
+<title>MFD CE Records – Admin</title>
+<link rel="stylesheet" href="style.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<style>
-  body { font-family: Arial, sans-serif; background: #fff; margin: 20px; }
-  h1 { text-align: center; }
-  button { margin: 5px; padding: 8px 16px; cursor: pointer; }
-  .entry { border-bottom: 1px solid #ccc; padding: 10px 0; }
-  .hidden { display: none; }
-  img { display: block; margin-top: 5px; }
-</style>
 </head>
-<body>
-  <h1>CE QR Generator – Admin View</h1>
-  <div id="login">
-    <p>Enter Password:</p>
-    <input type="password" id="pw" />
-    <button onclick="checkPW()">Login</button>
-    <p id="loginMsg" style="color:red;"></p>
+<body class="admin-body">
+  <div class="admin-container">
+    <h1>Martinsville Fire & EMS<br>Admin Record View</h1>
+
+    <div id="login">
+      <p>Enter Password:</p>
+      <input type="password" id="pw" />
+      <button onclick="checkPW()">Login</button>
+      <p id="loginMsg" style="color:red;"></p>
+    </div>
+
+    <div id="admin" class="hidden">
+      <button onclick="exportPDF()">Export All to PDF</button>
+      <button onclick="logout()">Logout</button>
+      <div id="records"></div>
+    </div>
   </div>
 
-  <div id="admin" class="hidden">
-    <button onclick="exportPDF()">Export All to PDF</button>
-    <button onclick="deleteAll()">Delete All</button>
-    <button onclick="logout()">Logout</button>
-    <div id="records"></div>
-  </div>
+<script>
+const SHEET_URL = "https://script.google.com/macros/s/AKfycbz4fAjnjqfybEBRVnFhQcnAnlOfyRUlYP5f34yZMUjaaSsBwRzPmaK6tfWFsB4kha-6/exec";
+const realPW = "Firefighter522539";
 
-  <script>
-  const SHEET_URL = "https://script.google.com/macros/s/AKfycbz4fAjnjqfybEBRVnFhQcnAnlOfyRUlYP5f34yZMUjaaSsBwRzPmaK6tfWFsB4kha-6/exec";
-  const realPW = "Firefighter522539";
-
-  function checkPW() {
-    const p = document.getElementById('pw').value.trim();
-    if (p === realPW) {
-      document.getElementById('login').classList.add('hidden');
-      document.getElementById('admin').classList.remove('hidden');
-      loadRecords();
-    } else {
-      document.getElementById('loginMsg').innerText = "Incorrect password.";
-    }
+function checkPW() {
+  const p = document.getElementById('pw').value.trim();
+  if (p === realPW) {
+    document.getElementById('login').classList.add('hidden');
+    document.getElementById('admin').classList.remove('hidden');
+    loadRecords();
+  } else {
+    document.getElementById('loginMsg').innerText = "Incorrect password.";
   }
+}
 
-  async function loadRecords() {
-    try {
-      const res = await fetch(SHEET_URL);
-      const recs = await res.json();
-      const div = document.getElementById('records');
-      div.innerHTML = '';
-      if (!recs.length) {
-        div.innerHTML = "<p>No records found.</p>";
-        return;
-      }
-      recs.forEach(r => {
+async function loadRecords() {
+  const div = document.getElementById('records');
+  div.innerHTML = "<p>Loading records...</p>";
+  try {
+    const res = await fetch(SHEET_URL);
+    const recs = await res.json();
+
+    // Group records by date
+    const grouped = {};
+    recs.forEach(r => {
+      const day = new Date(r.timestamp).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+      if (!grouped[day]) grouped[day] = [];
+      grouped[day].push(r);
+    });
+
+    const sortedDays = Object.keys(grouped).sort((a,b) => new Date(b) - new Date(a));
+    div.innerHTML = "";
+    sortedDays.forEach(day => {
+      const section = document.createElement('div');
+      section.className = "day-group";
+      section.innerHTML = `<h2 class="day-header">${day} (${grouped[day].length} entries)</h2>`;
+      const list = document.createElement('div');
+      list.className = "entry-list hidden";
+      grouped[day].forEach(r => {
         const e = document.createElement('div');
-        e.className = 'entry';
-        e.innerHTML = `<p><strong>${r.codeText}</strong><br>${r.timestamp}</p>`;
+        e.className = "entry";
+        e.innerHTML = `<p><strong>${r.codeText}</strong><br>${new Date(r.timestamp).toLocaleTimeString()}</p>`;
         if (r.image) {
           const img = new Image();
           img.src = r.image;
-          img.width = 150;
+          img.width = 100;
           e.appendChild(img);
         }
-        div.appendChild(e);
+        list.appendChild(e);
       });
-    } catch (err) {
-      console.error("Error fetching sheet data:", err);
-      document.getElementById('records').innerHTML = "<p>Error loading data.</p>";
-    }
-  }
-
-  function deleteAll() {
-    if (confirm("Are you sure you want to delete all records?")) {
-      // Clearing sheet from client side isn't possible via script.
-      alert("You must clear data manually in the Google Sheet for now.");
-    }
-  }
-
-  function exportPDF() {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    let y = 20;
-    doc.setFontSize(14);
-    doc.text("CE QR Generator Records", 10, 10);
-    document.querySelectorAll(".entry").forEach(e => {
-      const textEl = e.querySelector("p strong");
-      const tsEl = e.querySelector("p");
-      const imgEl = e.querySelector("img");
-      if (textEl) {
-        const txt = textEl.innerText;
-        doc.text(txt, 10, y);
-        y += 10;
-      }
-      if (tsEl) {
-        const time = tsEl.innerText;
-        doc.text(time, 10, y);
-        y += 10;
-      }
-      if (imgEl) {
-        doc.addImage(imgEl.src, "PNG", 10, y, 40, 40);
-        y += 50;
-      }
-      if (y > 260) {
-        doc.addPage();
-        y = 20;
-      }
+      section.appendChild(list);
+      section.querySelector(".day-header").onclick = () => list.classList.toggle("hidden");
+      div.appendChild(section);
     });
-    doc.save("QR_Records.pdf");
-  }
 
-  function logout() {
-    document.getElementById('admin').classList.add('hidden');
-    document.getElementById('login').classList.remove('hidden');
-    document.getElementById('pw').value = '';
+  } catch (err) {
+    div.innerHTML = "<p>Error loading data.</p>";
   }
-  </script>
+}
+
+function exportPDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  let y = 20;
+  doc.setFontSize(14);
+  doc.text("Martinsville Fire & EMS CE Records", 10, 10);
+
+  document.querySelectorAll(".entry").forEach(e => {
+    const txt = e.querySelector("strong")?.innerText || "";
+    const ts = e.querySelector("p")?.innerText || "";
+    const img = e.querySelector("img");
+    doc.text(txt, 10, y); y += 8;
+    doc.text(ts, 10, y); y += 8;
+    if (img) { doc.addImage(img.src, "PNG", 10, y, 30, 30); y += 35; }
+    if (y > 270) { doc.addPage(); y = 20; }
+  });
+  doc.save("MFD_CE_Records.pdf");
+}
+
+function logout() {
+  document.getElementById('admin').classList.add('hidden');
+  document.getElementById('login').classList.remove('hidden');
+  document.getElementById('pw').value = '';
+}
+</script>
 </body>
 </html>
