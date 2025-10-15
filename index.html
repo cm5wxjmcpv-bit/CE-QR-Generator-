@@ -1,29 +1,35 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Martinsville Fire & EMS CE Portal</title>
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
   <div class="overlay"></div>
-  <div class="container">
+  <div class="container fade-in">
     <img src="ABE9E472-6FA5-46E6-866D-992B713B5B5B.JPG" class="logo" alt="Martinsville Fire & EMS Logo">
     <h1>City of Martinsville<br>Fire & EMS<br>Continuing Education Portal</h1>
-    <p>Please complete all fields to log your CE attendance.</p>
+    <p class="desc">Complete all fields to record your CE attendance.</p>
+
     <input id="first" placeholder="First Name" />
     <input id="last" placeholder="Last Name" />
     <input id="cert" placeholder="Certification #" />
-    <button onclick="submitForm()">Submit</button>
+    <button id="submitBtn" onclick="submitForm()">Submit</button>
     <div id="message"></div>
+
+    <footer>© 2025 City of Martinsville Fire & EMS • CE Portal v3.0</footer>
   </div>
 
 <script>
 const SHEET_URL = "https://script.google.com/macros/s/AKfycbz4fAjnjqfybEBRVnFhQcnAnlOfyRUlYP5f34yZMUjaaSsBwRzPmaK6tfWFsB4kha-6/exec";
 
+function vibrate(ms=30){ if("vibrate" in navigator) navigator.vibrate(ms); }
+
 function submitForm() {
+  vibrate(50);
   const f = document.getElementById('first').value.trim().toUpperCase();
   const l = document.getElementById('last').value.trim().toUpperCase();
   const c = document.getElementById('cert').value.trim().toUpperCase();
@@ -32,13 +38,12 @@ function submitForm() {
     return;
   }
 
-  // Create hidden QR for backend logging
+  document.getElementById('message').innerText = "Submitting record...";
   const qrDiv = document.createElement("div");
   new QRCode(qrDiv, { text: `${c}${l}|${f}`, width: 200, height: 200 });
-  const imgEl = qrDiv.querySelector("img");
 
-  document.getElementById('message').innerText = "Submitting record...";
   setTimeout(() => {
+    const imgEl = qrDiv.querySelector("img");
     const imgData = imgEl ? imgEl.src : "";
     const payload = {
       codeText: `${c}${l}|${f}`,
@@ -54,7 +59,7 @@ function submitForm() {
     }).catch(err => console.log("Error posting:", err));
 
     document.getElementById('message').innerText =
-      "✅ Submission received — your CE record has been logged with Martinsville Fire & EMS.";
+      "✅ Submission received — your CE record has been logged.";
     document.getElementById('first').value = "";
     document.getElementById('last').value = "";
     document.getElementById('cert').value = "";
