@@ -4,12 +4,12 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>MFD CE Records – Admin</title>
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body class="admin-body">
-  <div class="admin-container">
-    <h1>Martinsville Fire & EMS<br>Admin Record View</h1>
+  <div class="admin-container fade-in">
+    <h1>Martinsville Fire & EMS<br>CE Record Admin Panel</h1>
 
     <div id="login">
       <p>Enter Password:</p>
@@ -29,7 +29,10 @@
 const SHEET_URL = "https://script.google.com/macros/s/AKfycbz4fAjnjqfybEBRVnFhQcnAnlOfyRUlYP5f34yZMUjaaSsBwRzPmaK6tfWFsB4kha-6/exec";
 const realPW = "Firefighter522539";
 
+function vibrate(ms=30){ if("vibrate" in navigator) navigator.vibrate(ms); }
+
 function checkPW() {
+  vibrate(30);
   const p = document.getElementById('pw').value.trim();
   if (p === realPW) {
     document.getElementById('login').classList.add('hidden');
@@ -47,7 +50,6 @@ async function loadRecords() {
     const res = await fetch(SHEET_URL);
     const recs = await res.json();
 
-    // Group records by date
     const grouped = {};
     recs.forEach(r => {
       const day = new Date(r.timestamp).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
@@ -60,7 +62,7 @@ async function loadRecords() {
     sortedDays.forEach(day => {
       const section = document.createElement('div');
       section.className = "day-group";
-      section.innerHTML = `<h2 class="day-header">${day} (${grouped[day].length} entries)</h2>`;
+      section.innerHTML = `<h2 class="day-header">${day} (${grouped[day].length})</h2>`;
       const list = document.createElement('div');
       list.className = "entry-list hidden";
       grouped[day].forEach(r => {
@@ -79,13 +81,13 @@ async function loadRecords() {
       section.querySelector(".day-header").onclick = () => list.classList.toggle("hidden");
       div.appendChild(section);
     });
-
   } catch (err) {
     div.innerHTML = "<p>Error loading data.</p>";
   }
 }
 
 function exportPDF() {
+  vibrate(30);
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
   let y = 20;
@@ -105,6 +107,7 @@ function exportPDF() {
 }
 
 function logout() {
+  vibrate(30);
   document.getElementById('admin').classList.add('hidden');
   document.getElementById('login').classList.remove('hidden');
   document.getElementById('pw').value = '';
