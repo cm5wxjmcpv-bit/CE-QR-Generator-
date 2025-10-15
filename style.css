@@ -1,3 +1,4 @@
+/* ===== GENERAL STYLING ===== */
 body {
   font-family: 'Open Sans', sans-serif;
   margin: 0;
@@ -15,14 +16,14 @@ body {
   position: absolute;
   top: 0; left: 0;
   width: 100%; height: 100%;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.65);
   z-index: 1;
 }
 
 .container {
   position: relative;
   z-index: 2;
-  background: rgba(11, 28, 44, 0.9);
+  background: rgba(11, 28, 44, 0.92);
   padding: 30px;
   border-radius: 12px;
   box-shadow: 0 0 20px rgba(0,0,0,0.8);
@@ -31,12 +32,16 @@ body {
   width: 400px;
 }
 
-.logo {
-  width: 100px;
-  border-radius: 50%;
-  margin-bottom: 10px;
+.fade-in {
+  animation: fadeIn 1s ease forwards;
 }
 
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* ===== HEADINGS ===== */
 h1 {
   font-family: 'Oswald', sans-serif;
   color: #ffd700;
@@ -44,11 +49,17 @@ h1 {
   font-size: 1.6em;
 }
 
-p {
-  color: #ddd;
-  margin-bottom: 15px;
+p.desc { color: #ccc; font-size: 0.95em; }
+
+/* ===== LOGO ===== */
+.logo {
+  width: 100px;
+  border-radius: 50%;
+  margin-bottom: 10px;
+  box-shadow: 0 0 8px #b22222;
 }
 
+/* ===== INPUTS & BUTTONS ===== */
 input {
   margin: 6px 0;
   padding: 10px;
@@ -56,22 +67,24 @@ input {
   font-size: 16px;
   border-radius: 5px;
   border: none;
+  text-align: center;
 }
 
 button {
   margin-top: 10px;
-  padding: 10px 20px;
+  padding: 12px 20px;
   font-size: 16px;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   background: #b22222;
   color: white;
   cursor: pointer;
-  transition: background 0.3s ease;
+  transition: background 0.3s ease, transform 0.1s ease;
 }
 
 button:hover {
   background: #ff4c4c;
+  transform: scale(1.05);
 }
 
 #message {
@@ -80,37 +93,55 @@ button:hover {
   font-weight: bold;
 }
 
+/* ===== FOOTER ===== */
+footer {
+  font-size: 0.8em;
+  color: #aaa;
+  margin-top: 20px;
+}
+
+/* ===== ADMIN PAGE ===== */
 .admin-body {
   background: #0b1c2c;
   color: white;
+  display: block;
 }
 
 .admin-container {
   max-width: 800px;
-  margin: 40px auto;
-  background: rgba(0,0,0,0.8);
-  padding: 20px 30px;
+  margin: 30px auto;
+  background: rgba(0,0,0,0.85);
+  padding: 20px;
   border-radius: 10px;
 }
 
 .day-header {
   background: #b22222;
   color: white;
-  padding: 8px 10px;
+  padding: 10px;
   border-radius: 6px;
   cursor: pointer;
   margin-top: 15px;
+  transition: background 0.3s;
 }
+.day-header:hover { background: #ff4c4c; }
 
-.entry-list {
-  margin-top: 10px;
-}
-
+.entry-list { margin-top: 10px; }
 .entry {
   border-bottom: 1px solid #444;
   padding: 8px 0;
 }
+.hidden { display: none; }
 
-.hidden {
-  display: none;
+/* ===== MOBILE OPTIMIZATION ===== */
+@media (max-width: 600px) {
+  body { flex-direction: column; align-items: stretch; background-attachment: scroll; }
+  .container { width: 90%; padding: 20px; margin: 20px auto; }
+  h1 { font-size: 1.2em; line-height: 1.3em; }
+  input, button { width: 100%; font-size: 1em; }
+  .logo { width: 80px; }
+  #message { font-size: 0.9em; }
+  .admin-container { margin: 10px; padding: 15px; overflow-y: auto; max-height: 90vh; }
+  .day-header { font-size: 1em; padding: 6px 8px; }
+  .entry img { width: 80px; }
 }
