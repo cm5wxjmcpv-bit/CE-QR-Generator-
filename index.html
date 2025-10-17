@@ -1,127 +1,166 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CE QR Generator</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Martinsville Fire & EMS CE Portal</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
 <style>
   body {
+    font-family: 'Open Sans', sans-serif;
     margin: 0;
     padding: 0;
+    background: url('ABE9E472-6FA5-46E6-866D-992B713B5B5B.JPG') no-repeat center center fixed;
+    background-size: cover;
     height: 100vh;
     display: flex;
     justify-content: center;
     align-items: center;
-    font-family: Arial, sans-serif;
-    background: url('https://cm5wxjmcpv-bit.github.io/CE-QR-Generator-/ABE9E472-6FA5-46E6-866D-992B713B5B5B.jpeg') no-repeat center center fixed;
-    background-size: cover;
     color: white;
   }
   .overlay {
-    position: absolute;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0, 0, 0, 0.55);
-    z-index: 1;
+    position: absolute; top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.6); z-index: 1;
   }
   .container {
-    position: relative;
-    z-index: 2;
-    background: rgba(0,0,0,0.75);
-    padding: 30px;
-    border-radius: 12px;
+    position: relative; z-index: 2;
+    background: rgba(11,28,44,0.92);
+    padding: 30px; border-radius: 12px;
     box-shadow: 0 0 20px rgba(0,0,0,0.8);
-    text-align: center;
-    width: 90%;
-    max-width: 400px;
+    text-align: center; width: 90%; max-width: 400px;
+    animation: fadeIn 1s ease;
   }
-  h1 {
-    color: #ff4c4c;
-    margin-bottom: 20px;
-  }
+  @keyframes fadeIn { from{opacity:0;transform:scale(0.95);} to{opacity:1;transform:scale(1);} }
+  .logo { width:100px; border-radius:50%; margin-bottom:10px; box-shadow:0 0 8px #ff4c4c; }
+  h1 { font-family:'Oswald',sans-serif; color:#ff4c4c; margin-bottom:8px; }
+  p.desc { color:#ff4c4c; font-size:0.95em; margin-bottom:15px; }
   input {
-    margin: 6px 0;
-    padding: 10px;
-    width: 90%;
-    font-size: 16px;
-    border-radius: 5px;
-    border: 1px solid #ccc;
+    margin:6px 0; padding:10px; width:90%; font-size:16px;
+    border-radius:5px; border:none; text-align:center;
   }
   button {
-    margin-top: 10px;
-    padding: 10px 20px;
-    font-size: 16px;
-    border: none;
-    border-radius: 6px;
-    background: #ff4c4c;
-    color: white;
-    cursor: pointer;
-    transition: background 0.3s;
+    margin-top:10px; padding:12px 20px; font-size:16px;
+    border:none; border-radius:8px; background:#b22222; color:white;
+    cursor:pointer; transition:background 0.3s ease, transform 0.1s ease;
   }
-  button:hover { background: #ff1c1c; }
-  #qrcode { margin-top: 20px; }
-  footer {
-    position: absolute;
-    bottom: 10px;
-    width: 100%;
-    text-align: center;
-    font-size: 12px;
-    color: #bbb;
+  button:hover { background:#ff4c4c; transform:scale(1.05); }
+  #message { margin-top:12px; font-weight:bold; min-height:24px; transition:all 0.3s ease; }
+  .alert {
+    background:rgba(255,76,76,0.1); border:1px solid #ff4c4c;
+    padding:8px; border-radius:6px; color:#ff4c4c;
+    animation:pulse 0.8s ease;
+  }
+  @keyframes pulse {
+    0%{transform:scale(1);opacity:0.8;}50%{transform:scale(1.05);opacity:1;}100%{transform:scale(1);opacity:0.9;}
+  }
+  footer { font-size:0.8em; color:#ff4c4c; margin-top:20px; }
+  @media (max-width:600px){
+    .container{padding:20px;} .logo{width:80px;} h1{font-size:1.2em;line-height:1.3em;}
   }
 </style>
 </head>
+
 <body>
   <div class="overlay"></div>
   <div class="container">
-    <h1>CE QR Generator</h1>
-    <input id="first" placeholder="First Name">
-    <input id="last" placeholder="Last Name">
-    <input id="cert" placeholder="Certification #"><br>
-    <button onclick="generateQR()">Generate QR Code</button>
+    <img src="ABE9E472-6FA5-46E6-866D-992B713B5B5B.JPG" class="logo" alt="MFD Logo">
+    <h1>Martinsville<br>Fire & EMS</h1>
+    <p class="desc">Continuing Education Attendance Portal</p>
+
+    <form id="ceForm">
+      <input id="first" placeholder="First Name" required />
+      <input id="last" placeholder="Last Name" required />
+      <input id="cert" placeholder="Certification #" required />
+      <button type="submit" id="submitBtn">Submit</button>
+    </form>
+
     <div id="message"></div>
-    <div id="qrcode"></div>
+    <footer>© 2025 Martinsville Fire & EMS • CE Portal v3.6</footer>
   </div>
-  <footer>City of Martinsville Fire & EMS | Blue Ridge ELDT</footer>
 
 <script>
 const SHEET_URL = "https://script.google.com/macros/s/AKfycbz4fAjnjqfybEBRVnFhQcnAnlOfyRUlYP5f34yZMUjaaSsBwRzPmaK6tfWFsB4kha-6/exec";
 
-function generateQR() {
+function vibrate(ms=30){ if("vibrate" in navigator) navigator.vibrate(ms); }
+
+document.getElementById("ceForm").addEventListener("submit", function(e){
+  e.preventDefault();
+  submitForm();
+});
+
+async function submitForm() {
+  vibrate(50);
   const f = document.getElementById('first').value.trim().toUpperCase();
   const l = document.getElementById('last').value.trim().toUpperCase();
   const c = document.getElementById('cert').value.trim().toUpperCase();
-  const urlParams = new URLSearchParams(window.location.search);
-  const instructorID = urlParams.get("instructor") || "Unknown";
+  const msg = document.getElementById('message');
+  msg.classList.remove('alert');
 
   if (!f || !l || !c) {
-    alert("Please fill in all fields.");
+    msg.innerText = "Please fill in all fields.";
+    msg.classList.add('alert');
     return;
   }
 
+  const urlParams = new URLSearchParams(window.location.search);
+  const instructorID = urlParams.get("instructor") || "Unknown";
   const codeText = `${c}${l}|${f}`;
-  const qrContainer = document.getElementById("qrcode");
-  qrContainer.innerHTML = '';
-  new QRCode(qrContainer, { text: codeText, width: 200, height: 200 });
-  document.getElementById('message').innerText = "Generating QR Code...";
+  const today = new Date().toLocaleDateString('en-US');
+  msg.innerText = "Checking for existing record...";
 
-  setTimeout(() => {
-    const imgEl = qrContainer.querySelector("img");
-    const imgData = imgEl ? imgEl.src : "";
-    fetch(SHEET_URL, {
-      method: "POST",
-      mode: "no-cors",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+  try {
+    const res = await fetch(SHEET_URL);
+    const recs = await res.json();
+
+    const duplicate = recs.find(r => {
+      const rDate = new Date(r.timestamp).toLocaleDateString('en-US');
+      return r.codeText === codeText && rDate === today;
+    });
+
+    if (duplicate) {
+      msg.innerText = "⚠️ You’ve already submitted your CE record today.";
+      msg.classList.add('alert');
+      vibrate(100);
+      return;
+    }
+
+    msg.innerText = "Submitting record...";
+    const qrDiv = document.createElement("div");
+    new QRCode(qrDiv, { text: codeText, width: 200, height: 200 });
+
+    setTimeout(() => {
+      const imgEl = qrDiv.querySelector("img");
+      const imgData = imgEl ? imgEl.src : "";
+      const payload = {
         instructor: instructorID,
         firstName: f,
         lastName: l,
         certNumber: c,
         codeText: codeText,
-        image: imgData
-      })
-    }).catch(err => console.error("Error posting to sheet:", err));
-    document.getElementById('message').innerText = "QR Code generated and saved ✅";
-  }, 600);
+        image: imgData,
+        timestamp: new Date().toISOString()
+      };
+
+      fetch(SHEET_URL, {
+        method: "POST", mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      }).catch(err => console.log("Error posting:", err));
+
+      msg.innerText = "✅ Submission received — your CE record has been logged.";
+      msg.classList.remove('alert');
+      document.getElementById('first').value = "";
+      document.getElementById('last').value = "";
+      document.getElementById('cert').value = "";
+    }, 600);
+
+  } catch (err) {
+    console.error("Error:", err);
+    msg.innerText = "⚠️ Unable to verify. Please try again later.";
+    msg.classList.add('alert');
+  }
 }
 </script>
 </body>
