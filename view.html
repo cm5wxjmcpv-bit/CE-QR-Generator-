@@ -3,437 +3,587 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>MFD CE Records – Main Admin</title>
+<title>Martinsville Fire & EMS CE Admin</title>
 <link rel="stylesheet" href="style.css" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body class="admin-body">
-  <div class="admin-container fade-in">
-    <h1>Martinsville Fire & EMS<br>CE Main Admin Portal</h1>
+  <div class="admin-page-wrap">
+    <div class="admin-container fade-in">
+      <h1>Martinsville Fire & EMS<br>CE Admin Portal</h1>
+      <p class="admin-subtitle">Admin login, instructor management, and CE records</p>
 
-    <div id="adminLoginSection" class="panel">
-      <h2>Admin Login</h2>
-      <div class="inline-form two-col">
-        <input type="text" id="adminUsername" placeholder="Admin Username" autocomplete="username" />
-        <input type="password" id="adminPassword" placeholder="Admin Password" autocomplete="current-password" />
-      </div>
-      <button onclick="handleAdminLogin()">Login</button>
-      <p id="adminLoginMsg" class="error-text"></p>
-    </div>
-
-    <div id="adminAppSection" class="hidden">
-      <div class="toolbar">
-        <div id="adminWelcome" class="subtle"></div>
-        <button onclick="logout()">Logout</button>
-      </div>
-
-      <section class="panel" id="summaryPanel">
-        <h2>Dashboard Summary</h2>
-        <div id="summaryText" class="subtle"></div>
-      </section>
-
-      <section class="panel">
-        <h2>Instructor User Management</h2>
-        <form id="instructorForm" onsubmit="event.preventDefault(); saveUserFromForm();">
-          <input type="hidden" id="formRowNumber" />
-          <input type="hidden" id="formRole" value="instructor" />
-          <div class="inline-form two-col">
-            <input type="text" id="formDisplayName" placeholder="Instructor Display Name" required />
-            <input type="text" id="formSlug" placeholder="Instructor ID / slug (ex: medic-1)" required />
-            <input type="text" id="formUsername" placeholder="Username" required autocomplete="off" />
-            <input type="password" id="formPassword" placeholder="Password (required for new user)" autocomplete="new-password" />
+      <div id="loginCard" class="panel">
+        <h2>Admin Login</h2>
+        <div class="form-grid">
+          <div>
+            <label for="adminUser">Username</label>
+            <input id="adminUser" type="text" autocomplete="username" placeholder="Admin username" />
           </div>
-          <div class="inline-form">
-            <label class="checkbox-label"><input type="checkbox" id="formActive" checked /> Active</label>
-            <button type="button" onclick="generatePasswordForForm()">Generate Password</button>
-            <button type="submit">Save Instructor</button>
-            <button type="button" onclick="clearInstructorForm()">Cancel Edit</button>
+          <div>
+            <label for="adminPass">Password</label>
+            <input id="adminPass" type="password" autocomplete="current-password" placeholder="Admin password" />
           </div>
-          <p id="formMsg" class="error-text"></p>
-        </form>
-
-        <div class="table-wrap">
-          <table class="admin-table" id="instructorTable">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Username</th>
-                <th>Slug</th>
-                <th>Status</th>
-                <th>Instructor URLs</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
         </div>
-      </section>
-
-      <section class="panel">
-        <h2>Existing CE Record Tools</h2>
-        <div class="inline-form">
-          <button onclick="refreshRecords()">🔄 Refresh</button>
-          <button onclick="exportPDF()">📄 Export All to PDF</button>
+        <div class="button-row">
+          <button onclick="adminLogin()">Login</button>
         </div>
-        <div id="records"></div>
-      </section>
+        <p id="loginMsg" class="status-text"></p>
+      </div>
+
+      <div id="adminApp" class="hidden">
+        <div class="top-actions">
+          <div id="welcomeText" class="welcome-text"></div>
+          <div class="button-row">
+            <button onclick="loadUsers()">Refresh Users</button>
+            <button onclick="loadRecords()">Refresh Records</button>
+            <button onclick="exportPDF()">Export All to PDF</button>
+            <button onclick="logout()">Logout</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>Add / Update Instructor</h2>
+          <div class="form-grid three-col">
+            <div>
+              <label for="displayName">Display Name</label>
+              <input id="displayName" type="text" placeholder="John Smith" />
+            </div>
+            <div>
+              <label for="username">Username</label>
+              <input id="username" type="text" placeholder="jsmith" />
+            </div>
+            <div>
+              <label for="password">Password</label>
+              <input id="password" type="text" placeholder="Set or reset password" />
+            </div>
+            <div>
+              <label for="role">Role</label>
+              <select id="role">
+                <option value="instructor">Instructor</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+            <div>
+              <label for="slug">Instructor Slug</label>
+              <input id="slug" type="text" placeholder="john-smith" />
+            </div>
+            <div>
+              <label for="active">Active</label>
+              <select id="active">
+                <option value="true">Active</option>
+                <option value="false">Inactive</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="notes-wrap">
+            <label for="notes">Notes</label>
+            <textarea id="notes" rows="3" placeholder="Optional notes"></textarea>
+          </div>
+
+          <div class="button-row">
+            <button onclick="addUser()">Add User</button>
+            <button onclick="updateUser()">Update Existing User</button>
+            <button onclick="clearUserForm()">Clear Form</button>
+          </div>
+          <p id="userMsg" class="status-text"></p>
+        </div>
+
+        <div class="panel">
+          <h2>Instructor Users</h2>
+          <p class="helper-text">Click Fill to load a user into the form. Toggle changes active/inactive status.</p>
+          <div id="usersWrap">
+            <p>Loading users...</p>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>All CE Records</h2>
+          <p class="helper-text">Admin token is required for full-record access and delete actions.</p>
+          <div id="records"><p>Loading records...</p></div>
+        </div>
+      </div>
     </div>
   </div>
 
 <script>
-// Extend this existing Apps Script deployment URL.
-const API_URL = "https://script.google.com/macros/s/AKfycbzInH8NjKhpXekkdP-yCxoHF_oMzzcAwLvwsuK9js_DEUFtRUEXJIEMtEZ92KNx8Ig/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzInH8NjKhpXekkdP-yCxoHF_oMzzcAwLvwsuK9js_DEUFtRUEXJIEMtEZ92KNx8Ig/exec";
+const ADMIN_TOKEN = "REPLACE_WITH_YOUR_REAL_ADMIN_TOKEN";
 
-let adminSession = null;
-
-function sanitizeSlug(slug) {
-  return String(slug || '')
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9-]/g, '-')
-    .replace(/-{2,}/g, '-')
-    .replace(/^-+|-+$/g, '');
+function vibrate(ms = 30) {
+  if ("vibrate" in navigator) navigator.vibrate(ms);
 }
 
-function generatePassword(length = 14) {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%';
-  let output = '';
-  const randomValues = new Uint32Array(length);
-  crypto.getRandomValues(randomValues);
-  for (let i = 0; i < length; i += 1) {
-    output += chars[randomValues[i] % chars.length];
+function qs(params) {
+  return new URLSearchParams(params).toString();
+}
+
+async function apiGet(params) {
+  const url = `${SCRIPT_URL}?${qs(params)}`;
+  let res;
+  try {
+    res = await fetch(url, { method: "GET", cache: "no-store" });
+  } catch (err) {
+    throw new Error("Network failure. Check script URL, deployment, or connection.");
   }
-  return output;
-}
 
-function buildInstructorUrls(slug) {
-  const safeSlug = encodeURIComponent(slug);
-  const base = window.location.origin + window.location.pathname.replace(/[^/]+$/, '');
-  return {
-    publicUrl: `${base}index.html?instructor=${safeSlug}`,
-    dashboardUrl: `${base}instructor.html?instructor=${safeSlug}`
-  };
-}
+  let text;
+  try {
+    text = await res.text();
+  } catch (err) {
+    throw new Error("Unable to read response from server.");
+  }
 
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
+  try {
+    return JSON.parse(text);
+  } catch (err) {
+    throw new Error(`Invalid JSON from server: ${text}`);
+  }
 }
 
 async function apiPost(payload) {
-  const response = await fetch(API_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  });
-  return response.json();
+  let res;
+  try {
+    res = await fetch(SCRIPT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+  } catch (err) {
+    throw new Error("Network failure. Check script URL, deployment, or connection.");
+  }
+
+  let text;
+  try {
+    text = await res.text();
+  } catch (err) {
+    throw new Error("Unable to read response from server.");
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch (err) {
+    if (text === "Success") return { ok: true };
+    throw new Error(`Invalid JSON from server: ${text}`);
+  }
 }
 
-function requireAdminSession() {
-  if (!adminSession) throw new Error('Please log in as admin.');
-  return {
-    adminUsername: adminSession.username,
-    adminPassword: adminSession.password
-  };
+function getSession() {
+  try {
+    return JSON.parse(sessionStorage.getItem("ceAdminSession") || "null");
+  } catch {
+    return null;
+  }
 }
 
-async function handleAdminLogin() {
-  const username = document.getElementById('adminUsername').value.trim();
-  const password = document.getElementById('adminPassword').value;
-  const msg = document.getElementById('adminLoginMsg');
-  msg.textContent = '';
+function setSession(data) {
+  sessionStorage.setItem("ceAdminSession", JSON.stringify(data));
+}
+
+function clearSession() {
+  sessionStorage.removeItem("ceAdminSession");
+}
+
+async function adminLogin() {
+  vibrate(30);
+  const username = document.getElementById("adminUser").value.trim();
+  const password = document.getElementById("adminPass").value.trim();
+  const msg = document.getElementById("loginMsg");
+  msg.className = "status-text";
+  msg.textContent = "Logging in...";
 
   if (!username || !password) {
-    msg.textContent = 'Username and password are required.';
+    msg.className = "status-text error-text";
+    msg.textContent = "Enter username and password.";
     return;
   }
 
   try {
-    const data = await apiPost({ action: 'adminLogin', username, password });
-    if (!data.ok) {
-      msg.textContent = data.message || 'Login failed.';
-      return;
-    }
-
-    adminSession = {
+    const data = await apiGet({
+      action: "adminLogin",
       username,
-      password,
-      displayName: data.user?.displayName || username
-    };
-
-    document.getElementById('adminLoginSection').classList.add('hidden');
-    document.getElementById('adminAppSection').classList.remove('hidden');
-    document.getElementById('adminWelcome').textContent = `Signed in as ${adminSession.displayName} (${adminSession.username})`;
-
-    await Promise.all([refreshUsers(), refreshRecords()]);
-  } catch (error) {
-    msg.textContent = `Login error: ${error.message}`;
-  }
-}
-
-function clearInstructorForm() {
-  document.getElementById('formRowNumber').value = '';
-  document.getElementById('instructorForm').reset();
-  document.getElementById('formActive').checked = true;
-  document.getElementById('formMsg').textContent = '';
-}
-
-function generatePasswordForForm() {
-  document.getElementById('formPassword').value = generatePassword(14);
-}
-
-async function refreshUsers() {
-  const auth = requireAdminSession();
-  const data = await apiPost({ action: 'getUsers', ...auth });
-  if (!data.ok) throw new Error(data.error || data.message || 'Unable to load users.');
-
-  const instructors = (data.users || []).filter(u => u.role === 'instructor');
-  renderInstructorTable(instructors);
-  refreshSummary(instructors);
-}
-
-function refreshSummary(instructors) {
-  const active = instructors.filter(i => i.active).length;
-  const inactive = instructors.length - active;
-  document.getElementById('summaryText').textContent = `Instructors: ${instructors.length} total • ${active} active • ${inactive} inactive`;
-}
-
-function renderInstructorTable(instructors) {
-  const tbody = document.querySelector('#instructorTable tbody');
-  if (!instructors.length) {
-    tbody.innerHTML = '<tr><td colspan="6">No instructor users configured.</td></tr>';
-    return;
-  }
-
-  tbody.innerHTML = instructors.map(i => {
-    const safeSlug = sanitizeSlug(i.instructorSlug);
-    const urls = buildInstructorUrls(safeSlug);
-    return `
-      <tr>
-        <td>${escapeHtml(i.displayName)}</td>
-        <td>${escapeHtml(i.username)}</td>
-        <td>${escapeHtml(safeSlug)}</td>
-        <td>${i.active ? 'Active' : 'Inactive'}</td>
-        <td>
-          <div class="url-stack">
-            <div class="url-row"><span>Public:</span><code>${escapeHtml(urls.publicUrl)}</code><button type="button" onclick="copyText('${urls.publicUrl}')">Copy</button></div>
-            <div class="url-row"><span>Dashboard:</span><code>${escapeHtml(urls.dashboardUrl)}</code><button type="button" onclick="copyText('${urls.dashboardUrl}')">Copy</button></div>
-          </div>
-        </td>
-        <td>
-          <button type="button" onclick="startEdit(${i.rowNumber}, '${escapeJs(i.displayName)}', '${escapeJs(i.username)}', '${escapeJs(safeSlug)}', ${Boolean(i.active)})">Edit</button>
-          <button type="button" onclick="toggleActive(${i.rowNumber}, ${!i.active})">${i.active ? 'Deactivate' : 'Reactivate'}</button>
-        </td>
-      </tr>
-    `;
-  }).join('');
-}
-
-function escapeJs(value) {
-  return String(value || '').replaceAll('\\', '\\\\').replaceAll("'", "\\'");
-}
-
-function startEdit(rowNumber, displayName, username, slug, active) {
-  document.getElementById('formRowNumber').value = rowNumber;
-  document.getElementById('formDisplayName').value = displayName;
-  document.getElementById('formUsername').value = username;
-  document.getElementById('formSlug').value = slug;
-  document.getElementById('formPassword').value = '';
-  document.getElementById('formActive').checked = Boolean(active);
-  document.getElementById('formMsg').textContent = 'Editing existing instructor. Enter password only to reset it.';
-}
-
-async function saveUserFromForm() {
-  const rowNumber = document.getElementById('formRowNumber').value;
-  const displayName = document.getElementById('formDisplayName').value.trim();
-  const username = document.getElementById('formUsername').value.trim();
-  const instructorSlug = sanitizeSlug(document.getElementById('formSlug').value);
-  const password = document.getElementById('formPassword').value;
-  const active = document.getElementById('formActive').checked;
-  const msg = document.getElementById('formMsg');
-  msg.textContent = '';
-
-  if (!displayName || !username || !instructorSlug) {
-    msg.textContent = 'Display name, username, and slug are required.';
-    return;
-  }
-
-  if (!rowNumber && !password) {
-    msg.textContent = 'Password is required for a new instructor user.';
-    return;
-  }
-
-  const auth = requireAdminSession();
-  const payload = {
-    ...auth,
-    role: 'instructor',
-    displayName,
-    username,
-    instructorSlug,
-    active,
-    notes: ''
-  };
-
-  if (password) payload.password = password;
-
-  let data;
-  if (rowNumber) {
-    data = await apiPost({ action: 'updateUser', rowNumber: Number(rowNumber), ...payload });
-  } else {
-    data = await apiPost({ action: 'addUser', ...payload });
-  }
-
-  if (!data.ok) {
-    msg.textContent = data.message || data.error || 'Save failed.';
-    return;
-  }
-
-  clearInstructorForm();
-  await refreshUsers();
-}
-
-async function toggleActive(rowNumber, active) {
-  const auth = requireAdminSession();
-  const data = await apiPost({ action: 'toggleUserActive', rowNumber: Number(rowNumber), active, ...auth });
-  if (!data.ok) {
-    alert(data.message || data.error || 'Unable to update status.');
-    return;
-  }
-
-  await refreshUsers();
-}
-
-async function copyText(text) {
-  try {
-    await navigator.clipboard.writeText(text);
-  } catch (error) {
-    console.warn('Clipboard copy failed', error);
-  }
-}
-
-async function refreshRecords() {
-  const recordsDiv = document.getElementById('records');
-  recordsDiv.innerHTML = '<p>Loading records...</p>';
-
-  try {
-    const auth = requireAdminSession();
-    const data = await apiPost({ action: 'getAllRecords', ...auth });
-    if (!data.ok) {
-      recordsDiv.innerHTML = `<p>${escapeHtml(data.error || data.message || 'Error loading records.')}</p>`;
-      return;
-    }
-
-    const recs = data.records || [];
-    const grouped = {};
-    recs.forEach((r, idx) => {
-      const day = new Date(r.timestamp).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-      if (!grouped[day]) grouped[day] = [];
-      grouped[day].push({ ...r, rowGuess: idx + 2 });
+      password
     });
 
-    const sortedDays = Object.keys(grouped).sort((a,b) => new Date(b) - new Date(a));
-    recordsDiv.innerHTML = '';
+    if (data.ok && data.user && data.user.role === "admin") {
+      setSession({
+        username,
+        password,
+        displayName: data.user.displayName || username
+      });
 
-    if (!sortedDays.length) {
-      recordsDiv.innerHTML = '<p>No records found.</p>';
+      document.getElementById("welcomeText").textContent = `Logged in as ${data.user.displayName || username}`;
+      document.getElementById("loginCard").classList.add("hidden");
+      document.getElementById("adminApp").classList.remove("hidden");
+      msg.textContent = "";
+      await loadUsers();
+      await loadRecords();
       return;
     }
 
+    msg.className = "status-text error-text";
+    msg.textContent = data.error || data.message || "Invalid admin credentials.";
+  } catch (err) {
+    msg.className = "status-text error-text";
+    msg.textContent = err.message || "Login failed.";
+  }
+}
+
+async function loadUsers() {
+  const wrap = document.getElementById("usersWrap");
+  wrap.innerHTML = "<p>Loading users...</p>";
+
+  try {
+    const data = await apiGet({
+      action: "getUsers",
+      adminToken: ADMIN_TOKEN
+    });
+
+    if (!data.ok) {
+      wrap.innerHTML = `<p class="error-text">${data.error || "Unable to load users."}</p>`;
+      return;
+    }
+
+    const users = Array.isArray(data.users) ? data.users : [];
+    if (!users.length) {
+      wrap.innerHTML = "<p>No users found.</p>";
+      return;
+    }
+
+    let html = `
+      <div class="table-wrap">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Display</th>
+              <th>Username</th>
+              <th>Role</th>
+              <th>Slug</th>
+              <th>Active</th>
+              <th>URLs</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+    `;
+
+    users.forEach(user => {
+      const slug = user.instructorSlug || "";
+      const publicUrl = `${location.origin}${location.pathname.replace(/view\.html.*$/i, "index.html")}?instructor=${encodeURIComponent(slug)}`;
+      const instructorUrl = `${location.origin}${location.pathname.replace(/view\.html.*$/i, "instructor.html")}?instructor=${encodeURIComponent(slug)}`;
+
+      html += `
+        <tr>
+          <td>${escapeHtml(user.displayName || "")}</td>
+          <td>${escapeHtml(user.username || "")}</td>
+          <td>${escapeHtml(user.role || "")}</td>
+          <td>${escapeHtml(slug)}</td>
+          <td>${user.active ? "Yes" : "No"}</td>
+          <td>
+            ${user.role === "instructor" ? `
+              <div class="url-block">
+                <div><strong>Public:</strong> <span class="url-text">${escapeHtml(publicUrl)}</span></div>
+                <div><strong>Instructor:</strong> <span class="url-text">${escapeHtml(instructorUrl)}</span></div>
+                <div class="mini-button-row">
+                  <button class="small-btn" onclick="copyText('${escapeJs(publicUrl)}')">Copy Public</button>
+                  <button class="small-btn" onclick="copyText('${escapeJs(instructorUrl)}')">Copy Instructor</button>
+                </div>
+              </div>
+            ` : `<span class="muted-text">N/A</span>`}
+          </td>
+          <td>
+            <div class="mini-button-row">
+              <button class="small-btn" onclick='fillUserForm(${JSON.stringify(user).replace(/'/g, "&apos;")})'>Fill</button>
+              <button class="small-btn" onclick="toggleUser('${escapeJs(user.username || "")}')">${user.active ? "Deactivate" : "Activate"}</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    });
+
+    html += "</tbody></table></div>";
+    wrap.innerHTML = html;
+  } catch (err) {
+    wrap.innerHTML = `<p class="error-text">${err.message || "Unable to load users."}</p>`;
+  }
+}
+
+async function loadRecords() {
+  const div = document.getElementById("records");
+  div.innerHTML = "<p>Loading records...</p>";
+
+  try {
+    const data = await apiGet({
+      action: "getAllRecords",
+      adminToken: ADMIN_TOKEN
+    });
+
+    if (!data.ok) {
+      div.innerHTML = `<p class="error-text">${data.error || "Unable to load records."}</p>`;
+      return;
+    }
+
+    const recs = Array.isArray(data.records) ? data.records : [];
+    if (!recs.length) {
+      div.innerHTML = "<p>No records found.</p>";
+      return;
+    }
+
+    const grouped = {};
+    recs.forEach(r => {
+      const day = new Date(r.timestamp).toLocaleDateString("en-US", {
+        month: "long",
+        day: "numeric",
+        year: "numeric"
+      });
+      if (!grouped[day]) grouped[day] = [];
+      grouped[day].push(r);
+    });
+
+    const sortedDays = Object.keys(grouped).sort((a, b) => new Date(b) - new Date(a));
+    div.innerHTML = "";
+
     sortedDays.forEach(day => {
-      const section = document.createElement('div');
-      section.className = 'day-group';
-      section.innerHTML = `<h3 class="day-header">${day} (${grouped[day].length})</h3>`;
-      const list = document.createElement('div');
-      list.className = 'entry-list hidden';
+      const section = document.createElement("div");
+      section.className = "day-group";
+
+      const header = document.createElement("h2");
+      header.className = "day-header";
+      header.textContent = `${day} (${grouped[day].length})`;
+
+      const list = document.createElement("div");
+      list.className = "entry-list hidden";
 
       grouped[day].forEach(r => {
-        const entry = document.createElement('div');
-        entry.className = 'entry';
+        const entry = document.createElement("div");
+        entry.className = "entry";
         entry.innerHTML = `
-          <p><strong>${escapeHtml(r.codeText)}</strong><br>${new Date(r.timestamp).toLocaleTimeString()}<br>Instructor: ${escapeHtml(r.instructor || '')}</p>
-          <div class="record-actions">
-            <button type="button" onclick="deleteByRowPrompt()">Delete Row…</button>
+          <div class="entry-main">
+            <p><strong>${escapeHtml(r.studentFirst || "")} ${escapeHtml(r.studentLast || "")}</strong></p>
+            <p>Cert: ${escapeHtml(r.certNumber || "")}</p>
+            <p>Instructor: ${escapeHtml(r.instructor || "")}</p>
+            <p>${new Date(r.timestamp).toLocaleString()}</p>
+            <p class="code-line">${escapeHtml(r.codeText || "")}</p>
+          </div>
+          <div class="entry-side">
+            ${r.image ? `<img src="${r.image}" alt="QR" />` : ""}
+            <button class="small-btn danger-btn" onclick="deleteRow(${Number(r.row)})">Delete Row ${Number(r.row)}</button>
           </div>
         `;
-
-        if (r.image) {
-          const img = new Image();
-          img.src = r.image;
-          img.width = 100;
-          entry.appendChild(img);
-        }
-
         list.appendChild(entry);
       });
 
+      header.onclick = () => list.classList.toggle("hidden");
+      section.appendChild(header);
       section.appendChild(list);
-      section.querySelector('.day-header').onclick = () => list.classList.toggle('hidden');
-      recordsDiv.appendChild(section);
+      div.appendChild(section);
     });
-  } catch (error) {
-    recordsDiv.innerHTML = `<p>${escapeHtml(error.message || 'Error loading records.')}</p>`;
+  } catch (err) {
+    div.innerHTML = `<p class="error-text">${err.message || "Unable to load records."}</p>`;
   }
 }
 
-async function deleteByRowPrompt() {
-  const rowInput = prompt('Enter Submissions sheet row number to delete (2+).');
-  if (!rowInput) return;
+async function addUser() {
+  const msg = document.getElementById("userMsg");
+  msg.className = "status-text";
+  msg.textContent = "Adding user...";
 
-  const rowNumber = Number(rowInput);
-  if (!rowNumber || rowNumber < 2) {
-    alert('Please enter a valid row number (2 or higher).');
-    return;
+  try {
+    const payload = getUserPayload("addUser");
+    const data = await apiPost(payload);
+
+    if (!data.ok) {
+      msg.className = "status-text error-text";
+      msg.textContent = data.error || "Unable to add user.";
+      return;
+    }
+
+    msg.className = "status-text success-text";
+    msg.textContent = "User added.";
+    clearUserForm(false);
+    await loadUsers();
+  } catch (err) {
+    msg.className = "status-text error-text";
+    msg.textContent = err.message || "Unable to add user.";
   }
+}
 
-  const query = new URLSearchParams({ deleteRow: String(rowNumber) });
-  const response = await fetch(`${API_URL}?${query.toString()}`);
-  const data = await response.json();
-  if (!data.ok) {
-    alert(data.error || 'Delete failed.');
-    return;
+async function updateUser() {
+  const msg = document.getElementById("userMsg");
+  msg.className = "status-text";
+  msg.textContent = "Updating user...";
+
+  try {
+    const payload = getUserPayload("updateUser");
+    const data = await apiPost(payload);
+
+    if (!data.ok) {
+      msg.className = "status-text error-text";
+      msg.textContent = data.error || "Unable to update user.";
+      return;
+    }
+
+    msg.className = "status-text success-text";
+    msg.textContent = "User updated.";
+    await loadUsers();
+  } catch (err) {
+    msg.className = "status-text error-text";
+    msg.textContent = err.message || "Unable to update user.";
   }
+}
 
-  await refreshRecords();
+async function toggleUser(username) {
+  if (!username) return;
+
+  try {
+    const data = await apiPost({
+      action: "toggleUserActive",
+      username,
+      adminToken: ADMIN_TOKEN
+    });
+
+    if (!data.ok) {
+      alert(data.error || "Unable to toggle user.");
+      return;
+    }
+
+    await loadUsers();
+  } catch (err) {
+    alert(err.message || "Unable to toggle user.");
+  }
+}
+
+async function deleteRow(row) {
+  if (!confirm(`Delete row ${row}?`)) return;
+
+  try {
+    const data = await apiGet({
+      action: "delete",
+      row,
+      adminToken: ADMIN_TOKEN
+    });
+
+    if (!data.ok) {
+      alert(data.error || "Delete failed.");
+      return;
+    }
+
+    await loadRecords();
+  } catch (err) {
+    alert(err.message || "Delete failed.");
+  }
+}
+
+function getUserPayload(action) {
+  return {
+    action,
+    adminToken: ADMIN_TOKEN,
+    displayName: document.getElementById("displayName").value.trim(),
+    username: document.getElementById("username").value.trim(),
+    password: document.getElementById("password").value.trim(),
+    role: document.getElementById("role").value,
+    instructorSlug: document.getElementById("slug").value.trim().toLowerCase(),
+    active: document.getElementById("active").value === "true",
+    notes: document.getElementById("notes").value.trim()
+  };
+}
+
+function fillUserForm(user) {
+  if (!user) return;
+  document.getElementById("displayName").value = user.displayName || "";
+  document.getElementById("username").value = user.username || "";
+  document.getElementById("password").value = "";
+  document.getElementById("role").value = user.role || "instructor";
+  document.getElementById("slug").value = user.instructorSlug || "";
+  document.getElementById("active").value = String(!!user.active);
+  document.getElementById("notes").value = user.notes || "";
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function clearUserForm(clearMsg = true) {
+  document.getElementById("displayName").value = "";
+  document.getElementById("username").value = "";
+  document.getElementById("password").value = "";
+  document.getElementById("role").value = "instructor";
+  document.getElementById("slug").value = "";
+  document.getElementById("active").value = "true";
+  document.getElementById("notes").value = "";
+  if (clearMsg) {
+    const msg = document.getElementById("userMsg");
+    msg.textContent = "";
+    msg.className = "status-text";
+  }
 }
 
 function exportPDF() {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
-  let y = 20;
-  doc.setFontSize(14);
-  doc.text('Martinsville Fire & EMS CE Records', 10, 10);
+  let y = 15;
 
-  document.querySelectorAll('.entry').forEach(entry => {
-    const txt = entry.querySelector('strong')?.innerText || '';
-    const ts = entry.querySelector('p')?.innerText || '';
-    const img = entry.querySelector('img');
+  doc.setFontSize(16);
+  doc.text("Martinsville Fire & EMS CE Records", 10, y);
+  y += 10;
 
-    doc.text(txt, 10, y); y += 8;
-    doc.text(ts, 10, y); y += 8;
-    if (img) {
-      doc.addImage(img.src, 'PNG', 10, y, 30, 30);
-      y += 35;
-    }
-    if (y > 270) {
-      doc.addPage();
-      y = 20;
-    }
+  document.querySelectorAll(".entry").forEach(entry => {
+    const lines = entry.innerText.split("\n").map(s => s.trim()).filter(Boolean);
+    lines.forEach(line => {
+      doc.setFontSize(10);
+      doc.text(line, 10, y);
+      y += 6;
+      if (y > 275) {
+        doc.addPage();
+        y = 15;
+      }
+    });
+    y += 4;
   });
 
-  doc.save('MFD_CE_Records.pdf');
+  doc.save("MFD_CE_Records.pdf");
 }
 
 function logout() {
-  adminSession = null;
-  clearInstructorForm();
-  document.getElementById('adminPassword').value = '';
-  document.getElementById('adminAppSection').classList.add('hidden');
-  document.getElementById('adminLoginSection').classList.remove('hidden');
+  clearSession();
+  document.getElementById("adminApp").classList.add("hidden");
+  document.getElementById("loginCard").classList.remove("hidden");
+  document.getElementById("adminPass").value = "";
+  document.getElementById("loginMsg").textContent = "";
+  document.getElementById("welcomeText").textContent = "";
 }
+
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    alert("Copied.");
+  } catch {
+    alert(text);
+  }
+}
+
+function escapeHtml(str) {
+  return String(str || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function escapeJs(str) {
+  return String(str || "")
+    .replaceAll("\\", "\\\\")
+    .replaceAll("'", "\\'")
+    .replaceAll('"', '\\"');
+}
+
+window.addEventListener("load", () => {
+  const session = getSession();
+  if (session && session.username) {
+    document.getElementById("adminUser").value = session.username || "";
+    document.getElementById("adminPass").value = session.password || "";
+    adminLogin();
+  }
+});
 </script>
 </body>
 </html>
