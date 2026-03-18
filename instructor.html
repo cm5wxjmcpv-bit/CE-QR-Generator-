@@ -16,8 +16,8 @@
     min-height: 100vh;
   }
   .overlay {
-    position: absolute;
-    top: 0; left: 0; width: 100%; height: 100%;
+    position: fixed;
+    inset: 0;
     background: rgba(0, 0, 0, 0.65);
     z-index: 1;
   }
@@ -25,58 +25,145 @@
     position: relative;
     z-index: 2;
     background: rgba(11, 28, 44, 0.92);
-    margin: 40px auto;
-    padding: 30px;
+    margin: 30px auto;
+    padding: 28px;
     border-radius: 12px;
-    max-width: 800px;
+    max-width: 900px;
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
     animation: fadeIn 1s ease;
   }
   @keyframes fadeIn {
-    from {opacity: 0; transform: scale(0.95);} to {opacity: 1; transform: scale(1);} }
-  h1 { text-align: center; color: #ff4c4c; font-family: 'Oswald', sans-serif; margin-bottom: 10px; }
-  .controls { text-align: center; margin-bottom: 20px; }
-  .subtle { text-align: center; color: #ffc3c3; margin: 8px 0; }
-  button {
-    background: #b22222; color: white; border: none; border-radius: 6px;
-    padding: 10px 16px; margin: 5px; font-size: 15px; cursor: pointer; transition: 0.3s;
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
   }
-  button:hover { background: #ff4c4c; transform: scale(1.05); }
+  h1, h2 {
+    text-align: center;
+    color: #ff4c4c;
+    font-family: 'Oswald', sans-serif;
+    margin: 0 0 10px;
+  }
+  .subtitle {
+    text-align: center;
+    color: #f3d5d5;
+    margin-bottom: 20px;
+  }
+  .login-box, .records-box {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 20px;
+    margin-top: 18px;
+  }
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+  label {
+    display: block;
+    font-size: 0.9rem;
+    margin-bottom: 6px;
+    color: #f2d8d8;
+  }
   input {
-    margin: 6px 0; padding: 10px; width: 100%; font-size: 16px;
-    border-radius: 5px; border: none; text-align: left; box-sizing: border-box;
+    width: 100%;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 10px 12px;
+    font-size: 16px;
+    border-radius: 6px;
+    border: none;
   }
+  button {
+    background: #b22222;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 16px;
+    margin: 5px;
+    font-size: 15px;
+    cursor: pointer;
+    transition: 0.3s;
+  }
+  button:hover {
+    background: #ff4c4c;
+    transform: scale(1.03);
+  }
+  .controls {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  .status {
+    text-align: center;
+    min-height: 22px;
+    font-weight: 700;
+    margin-top: 12px;
+  }
+  .error { color: #ff8080; }
+  .success { color: #9cffb7; }
   .record {
-    border-bottom: 1px solid #ff4c4c; padding: 10px 0; display: flex; align-items: center; flex-wrap: wrap;
+    border-bottom: 1px solid #ff4c4c;
+    padding: 12px 0;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
   }
   .record img {
-    width: 90px; margin-right: 15px; border-radius: 6px; box-shadow: 0 0 10px rgba(255, 76, 76, 0.4);
+    width: 90px;
+    border-radius: 6px;
+    box-shadow: 0 0 10px rgba(255, 76, 76, 0.4);
   }
-  .record-info { flex: 1; }
+  .record-info {
+    flex: 1;
+    min-width: 220px;
+  }
   .record-info strong { color: #ff4c4c; }
+  .code-line {
+    font-size: 0.9rem;
+    opacity: 0.92;
+    word-break: break-all;
+  }
   .hidden { display: none; }
-  .error-text { color: #ff8080; text-align: center; min-height: 20px; }
-  footer { text-align: center; color: #ff4c4c; margin-top: 20px; font-size: 0.8em; }
+  footer {
+    text-align: center;
+    color: #ff4c4c;
+    margin-top: 20px;
+    font-size: 0.8em;
+  }
+  @media (max-width: 700px) {
+    .container { margin: 16px; padding: 18px; }
+    .form-grid { grid-template-columns: 1fr; }
+    button { width: 100%; margin: 6px 0; }
+  }
 </style>
 </head>
-
 <body>
   <div class="overlay"></div>
+
   <div class="container">
     <h1>Instructor Dashboard</h1>
+    <p class="subtitle">Instructor login required to view your student records</p>
 
-    <div id="loginPanel">
-      <p class="subtle">Log in with your instructor username and password.</p>
-      <input type="text" id="instructorUsername" placeholder="Instructor Username" autocomplete="username" />
-      <input type="password" id="instructorPassword" placeholder="Instructor Password" autocomplete="current-password" />
+    <div id="loginBox" class="login-box">
+      <h2>Instructor Login</h2>
+      <div class="form-grid">
+        <div>
+          <label for="instUser">Username</label>
+          <input id="instUser" type="text" autocomplete="username" placeholder="Instructor username" />
+        </div>
+        <div>
+          <label for="instPass">Password</label>
+          <input id="instPass" type="password" autocomplete="current-password" placeholder="Instructor password" />
+        </div>
+      </div>
       <div class="controls">
         <button onclick="loginInstructor()">Login</button>
       </div>
-      <p id="loginMsg" class="error-text"></p>
+      <div id="loginMsg" class="status"></div>
     </div>
 
-    <div id="dashboardPanel" class="hidden">
-      <p id="sessionInfo" class="subtle"></p>
+    <div id="recordsBox" class="records-box hidden">
       <div class="controls">
         <button onclick="refreshData()">🔄 Refresh</button>
         <button onclick="exportPDF()">📄 Export PDF</button>
@@ -89,117 +176,127 @@
   </div>
 
 <script>
-const API_URL = "https://script.google.com/macros/s/AKfycbzInH8NjKhpXekkdP-yCxoHF_oMzzcAwLvwsuK9js_DEUFtRUEXJIEMtEZ92KNx8Ig/exec";
-let instructorSession = null;
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzInH8NjKhpXekkdP-yCxoHF_oMzzcAwLvwsuK9js_DEUFtRUEXJIEMtEZ92KNx8Ig/exec";
 
-function sanitizeSlug(slug) {
-  return String(slug || '')
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9-]/g, '-')
-    .replace(/-{2,}/g, '-')
-    .replace(/^-+|-+$/g, '');
+function qs(params) {
+  return new URLSearchParams(params).toString();
 }
 
-function requestedSlugFromUrl() {
-  const urlParams = new URLSearchParams(window.location.search);
-  return sanitizeSlug(urlParams.get('instructor') || '');
+async function apiGet(params) {
+  const res = await fetch(`${SCRIPT_URL}?${qs(params)}`, { method: "GET", cache: "no-store" });
+  const text = await res.text();
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error(`Invalid JSON from server: ${text}`);
+  }
 }
 
-async function apiPost(payload) {
-  const response = await fetch(API_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  });
-  return response.json();
+function getSession() {
+  try {
+    return JSON.parse(sessionStorage.getItem("ceInstructorSession") || "null");
+  } catch {
+    return null;
+  }
+}
+
+function setSession(data) {
+  sessionStorage.setItem("ceInstructorSession", JSON.stringify(data));
+}
+
+function clearSession() {
+  sessionStorage.removeItem("ceInstructorSession");
 }
 
 async function loginInstructor() {
-  const username = document.getElementById('instructorUsername').value.trim();
-  const password = document.getElementById('instructorPassword').value;
-  const requestedSlug = requestedSlugFromUrl();
-  const msg = document.getElementById('loginMsg');
-  msg.textContent = '';
+  const username = document.getElementById("instUser").value.trim();
+  const password = document.getElementById("instPass").value.trim();
+  const msg = document.getElementById("loginMsg");
+  msg.className = "status";
+  msg.textContent = "Logging in...";
 
   if (!username || !password) {
-    msg.textContent = 'Username and password are required.';
+    msg.className = "status error";
+    msg.textContent = "Enter username and password.";
     return;
   }
 
   try {
-    const data = await apiPost({ action: 'instructorLogin', username, password, requestedSlug });
-    if (!data.ok) {
-      msg.textContent = data.message || 'Login failed.';
-      return;
-    }
-
-    instructorSession = {
+    const data = await apiGet({
+      action: "instructorLogin",
       username,
-      password,
-      displayName: data.user?.displayName || username,
-      instructorSlug: sanitizeSlug(data.user?.instructorSlug || '')
-    };
-
-    showDashboard();
-    await refreshData();
-  } catch (error) {
-    msg.textContent = `Login error: ${error.message}`;
-  }
-}
-
-function showDashboard() {
-  if (!instructorSession) return;
-  document.getElementById('sessionInfo').textContent = `Signed in as ${instructorSession.displayName} (${instructorSession.username}) • Instructor ID: ${instructorSession.instructorSlug}`;
-  document.getElementById('dashboardPanel').classList.remove('hidden');
-  document.getElementById('loginPanel').classList.add('hidden');
-}
-
-async function refreshData() {
-  const recordsDiv = document.getElementById('records');
-  if (!instructorSession) {
-    recordsDiv.innerHTML = '<p>Please log in first.</p>';
-    return;
-  }
-
-  recordsDiv.innerHTML = '<p>Loading student records...</p>';
-
-  try {
-    const data = await apiPost({
-      action: 'getInstructorRecords',
-      instructorUsername: instructorSession.username,
-      instructorPassword: instructorSession.password,
-      requestedSlug: requestedSlugFromUrl() || instructorSession.instructorSlug
+      password
     });
 
     if (!data.ok) {
-      recordsDiv.innerHTML = `<p>${data.message || data.error || 'Unable to load records.'}</p>`;
+      msg.className = "status error";
+      msg.textContent = data.error || "Invalid instructor login.";
       return;
     }
 
-    const records = data.records || [];
+    setSession({
+      username,
+      password,
+      displayName: data.displayName || username,
+      instructorSlug: data.instructorSlug || ""
+    });
+
+    msg.className = "status success";
+    msg.textContent = "Login successful.";
+    document.getElementById("loginBox").classList.add("hidden");
+    document.getElementById("recordsBox").classList.remove("hidden");
+    refreshData();
+  } catch (err) {
+    msg.className = "status error";
+    msg.textContent = err.message || "Unable to log in.";
+  }
+}
+
+async function refreshData() {
+  const session = getSession();
+  const recordsDiv = document.getElementById("records");
+  recordsDiv.innerHTML = "<p>Loading student records...</p>";
+
+  if (!session || !session.username || !session.password) {
+    recordsDiv.innerHTML = "<p>Please log in again.</p>";
+    return;
+  }
+
+  try {
+    const data = await apiGet({
+      action: "getInstructorRecords",
+      username: session.username,
+      password: session.password
+    });
+
+    if (!data.ok) {
+      recordsDiv.innerHTML = `<p class="error">${data.error || "Unauthorized."}</p>`;
+      return;
+    }
+
+    const records = Array.isArray(data.records) ? data.records : [];
     if (!records.length) {
-      recordsDiv.innerHTML = '<p>No student submissions found for this instructor.</p>';
+      recordsDiv.innerHTML = "<p>No student submissions found for this instructor.</p>";
       return;
     }
 
-    recordsDiv.innerHTML = '';
+    recordsDiv.innerHTML = "";
     records.forEach(r => {
-      const div = document.createElement('div');
-      div.className = 'record';
+      const div = document.createElement("div");
+      div.className = "record";
       div.innerHTML = `
-        <img src="${r.image}" alt="QR">
+        ${r.image ? `<img src="${r.image}" alt="QR">` : ""}
         <div class="record-info">
-          <p><strong>${r.studentFirst} ${r.studentLast}</strong> — ${r.certNumber}</p>
+          <p><strong>${escapeHtml(r.studentFirst || "")} ${escapeHtml(r.studentLast || "")}</strong> — ${escapeHtml(r.certNumber || "")}</p>
           <p>${new Date(r.timestamp).toLocaleString()}</p>
-          <p><small>${r.codeText}</small></p>
+          <p>Instructor: ${escapeHtml(r.instructor || "")}</p>
+          <p class="code-line">${escapeHtml(r.codeText || "")}</p>
         </div>
       `;
       recordsDiv.appendChild(div);
     });
   } catch (err) {
-    console.error(err);
-    recordsDiv.innerHTML = '<p>Error loading records.</p>';
+    recordsDiv.innerHTML = `<p class="error">${err.message || "Error loading records."}</p>`;
   }
 }
 
@@ -208,10 +305,10 @@ function exportPDF() {
   const doc = new jsPDF();
   let y = 20;
   doc.setFontSize(16);
-  doc.text('Instructor CE Records', 10, 10);
+  doc.text("Instructor CE Records", 10, 10);
 
-  document.querySelectorAll('.record-info').forEach(info => {
-    const lines = info.innerText.split('\n');
+  document.querySelectorAll(".record-info").forEach(info => {
+    const lines = info.innerText.split("\n");
     lines.forEach(line => {
       doc.text(line.trim(), 10, y);
       y += 8;
@@ -222,15 +319,36 @@ function exportPDF() {
     });
     y += 4;
   });
-  doc.save('Instructor_CE_Records.pdf');
+
+  doc.save("Instructor_CE_Records.pdf");
 }
 
 function logout() {
-  instructorSession = null;
-  document.getElementById('instructorPassword').value = '';
-  document.getElementById('dashboardPanel').classList.add('hidden');
-  document.getElementById('loginPanel').classList.remove('hidden');
+  clearSession();
+  document.getElementById("recordsBox").classList.add("hidden");
+  document.getElementById("loginBox").classList.remove("hidden");
+  document.getElementById("instPass").value = "";
+  document.getElementById("loginMsg").textContent = "";
+  document.getElementById("records").innerHTML = "<p>Loading student records...</p>";
 }
+
+function escapeHtml(str) {
+  return String(str || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+window.addEventListener("load", () => {
+  const session = getSession();
+  if (session && session.username && session.password) {
+    document.getElementById("instUser").value = session.username || "";
+    document.getElementById("instPass").value = session.password || "";
+    loginInstructor();
+  }
+});
 </script>
 </body>
 </html>
