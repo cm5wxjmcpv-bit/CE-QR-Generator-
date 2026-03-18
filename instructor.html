@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Instructor Dashboard | Martinsville Fire & EMS CE Portal</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="auth.js"></script>
 <style>
   body {
     margin: 0;
@@ -67,7 +66,7 @@
     <h1>Instructor Dashboard</h1>
 
     <div id="loginPanel">
-      <p class="subtle">Use your instructor username + password. URL instructor ID is validated after login.</p>
+      <p class="subtle">Log in with your instructor username and password.</p>
       <input type="text" id="instructorUsername" placeholder="Instructor Username" autocomplete="username" />
       <input type="password" id="instructorPassword" placeholder="Instructor Password" autocomplete="current-password" />
       <div class="controls">
@@ -90,55 +89,75 @@
   </div>
 
 <script>
-const SHEET_URL = "https://script.google.com/macros/s/AKfycbz4fAjnjqfybEBRVnFhQcnAnlOfyRUlYP5f34yZMUjaaSsBwRzPmaK6tfWFsB4kha-6/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbz4fAjnjqfybEBRVnFhQcnAnlOfyRUlYP5f34yZMUjaaSsBwRzPmaK6tfWFsB4kha-6/exec";
+let instructorSession = null;
+
+function sanitizeSlug(slug) {
+  return String(slug || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9-]/g, '-')
+    .replace(/-{2,}/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
 
 function requestedSlugFromUrl() {
   const urlParams = new URLSearchParams(window.location.search);
-  return CEAuth.sanitizeSlug(urlParams.get('instructor') || '');
+  return sanitizeSlug(urlParams.get('instructor') || '');
 }
 
-function showDashboardForSession() {
-  const session = CEAuth.getInstructorSession();
-  if (!session) {
-    document.getElementById('dashboardPanel').classList.add('hidden');
-    document.getElementById('loginPanel').classList.remove('hidden');
-    return;
-  }
-
-  const requestedSlug = requestedSlugFromUrl();
-  if (requestedSlug && requestedSlug !== session.slug) {
-    CEAuth.logoutInstructor();
-    document.getElementById('loginMsg').textContent = 'Session does not match this instructor URL. Please log in again.';
-    document.getElementById('dashboardPanel').classList.add('hidden');
-    document.getElementById('loginPanel').classList.remove('hidden');
-    return;
-  }
-
-  document.getElementById('sessionInfo').textContent = `Signed in as ${session.displayName} (${session.username}) • Instructor ID: ${session.slug}`;
-  document.getElementById('dashboardPanel').classList.remove('hidden');
-  document.getElementById('loginPanel').classList.add('hidden');
-  refreshData();
+async function apiPost(payload) {
+  const response = await fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  return response.json();
 }
 
 async function loginInstructor() {
   const username = document.getElementById('instructorUsername').value.trim();
   const password = document.getElementById('instructorPassword').value;
   const requestedSlug = requestedSlugFromUrl();
+  const msg = document.getElementById('loginMsg');
+  msg.textContent = '';
 
-  const result = await CEAuth.loginInstructor(username, password, requestedSlug);
-  if (!result.ok) {
-    document.getElementById('loginMsg').textContent = result.message;
+  if (!username || !password) {
+    msg.textContent = 'Username and password are required.';
     return;
   }
 
-  document.getElementById('loginMsg').textContent = '';
-  showDashboardForSession();
+  try {
+    const data = await apiPost({ action: 'instructorLogin', username, password, requestedSlug });
+    if (!data.ok) {
+      msg.textContent = data.message || 'Login failed.';
+      return;
+    }
+
+    instructorSession = {
+      username,
+      password,
+      displayName: data.user?.displayName || username,
+      instructorSlug: sanitizeSlug(data.user?.instructorSlug || '')
+    };
+
+    showDashboard();
+    await refreshData();
+  } catch (error) {
+    msg.textContent = `Login error: ${error.message}`;
+  }
+}
+
+function showDashboard() {
+  if (!instructorSession) return;
+  document.getElementById('sessionInfo').textContent = `Signed in as ${instructorSession.displayName} (${instructorSession.username}) • Instructor ID: ${instructorSession.instructorSlug}`;
+  document.getElementById('dashboardPanel').classList.remove('hidden');
+  document.getElementById('loginPanel').classList.add('hidden');
 }
 
 async function refreshData() {
-  const session = CEAuth.getInstructorSession();
   const recordsDiv = document.getElementById('records');
-  if (!session) {
+  if (!instructorSession) {
     recordsDiv.innerHTML = '<p>Please log in first.</p>';
     return;
   }
@@ -146,16 +165,26 @@ async function refreshData() {
   recordsDiv.innerHTML = '<p>Loading student records...</p>';
 
   try {
-    const res = await fetch(`${SHEET_URL}?instructor=${encodeURIComponent(session.slug)}`);
-    const data = await res.json();
+    const data = await apiPost({
+      action: 'getInstructorRecords',
+      instructorUsername: instructorSession.username,
+      instructorPassword: instructorSession.password,
+      requestedSlug: requestedSlugFromUrl() || instructorSession.instructorSlug
+    });
 
-    if (!data.length) {
+    if (!data.ok) {
+      recordsDiv.innerHTML = `<p>${data.message || data.error || 'Unable to load records.'}</p>`;
+      return;
+    }
+
+    const records = data.records || [];
+    if (!records.length) {
       recordsDiv.innerHTML = '<p>No student submissions found for this instructor.</p>';
       return;
     }
 
     recordsDiv.innerHTML = '';
-    data.forEach(r => {
+    records.forEach(r => {
       const div = document.createElement('div');
       div.className = 'record';
       div.innerHTML = `
@@ -197,15 +226,11 @@ function exportPDF() {
 }
 
 function logout() {
-  CEAuth.logoutInstructor();
+  instructorSession = null;
   document.getElementById('instructorPassword').value = '';
-  showDashboardForSession();
+  document.getElementById('dashboardPanel').classList.add('hidden');
+  document.getElementById('loginPanel').classList.remove('hidden');
 }
-
-window.onload = () => {
-  CEAuth.ensureStore();
-  showDashboardForSession();
-};
 </script>
 </body>
 </html>
