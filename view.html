@@ -6,7 +6,6 @@
 <title>MFD CE Records – Main Admin</title>
 <link rel="stylesheet" href="style.css" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="auth.js"></script>
 </head>
 <body class="admin-body">
   <div class="admin-container fade-in">
@@ -14,7 +13,6 @@
 
     <div id="adminLoginSection" class="panel">
       <h2>Admin Login</h2>
-      <p class="subtle">Default demo admin: <code>admin</code> / <code>ChangeMeNow!123</code> (change after first login).</p>
       <div class="inline-form two-col">
         <input type="text" id="adminUsername" placeholder="Admin Username" autocomplete="username" />
         <input type="password" id="adminPassword" placeholder="Admin Password" autocomplete="current-password" />
@@ -36,9 +34,9 @@
 
       <section class="panel">
         <h2>Instructor User Management</h2>
-        <p class="subtle">Passwords are stored as browser-side hashes. Only create instructor accounts on trusted admin devices.</p>
-        <form id="instructorForm" onsubmit="event.preventDefault(); saveInstructorFromForm();">
-          <input type="hidden" id="formInstructorId" />
+        <form id="instructorForm" onsubmit="event.preventDefault(); saveUserFromForm();">
+          <input type="hidden" id="formRowNumber" />
+          <input type="hidden" id="formRole" value="instructor" />
           <div class="inline-form two-col">
             <input type="text" id="formDisplayName" placeholder="Instructor Display Name" required />
             <input type="text" id="formSlug" placeholder="Instructor ID / slug (ex: medic-1)" required />
@@ -83,46 +81,38 @@
   </div>
 
 <script>
-const SHEET_URL = "https://script.google.com/macros/s/AKfycbz4fAjnjqfybEBRVnFhQcnAnlOfyRUlYP5f34yZMUjaaSsBwRzPmaK6tfWFsB4kha-6/exec";
+// Extend this existing Apps Script deployment URL.
+const API_URL = "https://script.google.com/macros/s/AKfycbz4fAjnjqfybEBRVnFhQcnAnlOfyRUlYP5f34yZMUjaaSsBwRzPmaK6tfWFsB4kha-6/exec";
 
-function vibrate(ms=30){ if("vibrate" in navigator) navigator.vibrate(ms); }
+let adminSession = null;
 
-async function handleAdminLogin() {
-  const username = document.getElementById('adminUsername').value.trim();
-  const password = document.getElementById('adminPassword').value;
-  const msg = document.getElementById('adminLoginMsg');
-  msg.textContent = '';
-
-  const result = await CEAuth.loginAdmin(username, password);
-  if (!result.ok) {
-    msg.textContent = result.message;
-    return;
-  }
-
-  renderForSession();
+function sanitizeSlug(slug) {
+  return String(slug || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9-]/g, '-')
+    .replace(/-{2,}/g, '-')
+    .replace(/^-+|-+$/g, '');
 }
 
-function renderForSession() {
-  const session = CEAuth.getAdminSession();
-  if (!session) {
-    document.getElementById('adminLoginSection').classList.remove('hidden');
-    document.getElementById('adminAppSection').classList.add('hidden');
-    return;
+function generatePassword(length = 14) {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%';
+  let output = '';
+  const randomValues = new Uint32Array(length);
+  crypto.getRandomValues(randomValues);
+  for (let i = 0; i < length; i += 1) {
+    output += chars[randomValues[i] % chars.length];
   }
-
-  document.getElementById('adminLoginSection').classList.add('hidden');
-  document.getElementById('adminAppSection').classList.remove('hidden');
-  document.getElementById('adminWelcome').textContent = `Signed in as ${session.displayName} (${session.username})`;
-  renderInstructorTable();
-  refreshSummary();
-  refreshRecords();
+  return output;
 }
 
-function refreshSummary() {
-  const instructors = CEAuth.listInstructors();
-  const active = instructors.filter(i => i.active).length;
-  const inactive = instructors.length - active;
-  document.getElementById('summaryText').textContent = `Instructors: ${instructors.length} total • ${active} active • ${inactive} inactive`;
+function buildInstructorUrls(slug) {
+  const safeSlug = encodeURIComponent(slug);
+  const base = window.location.origin + window.location.pathname.replace(/[^/]+$/, '');
+  return {
+    publicUrl: `${base}index.html?instructor=${safeSlug}`,
+    dashboardUrl: `${base}instructor.html?instructor=${safeSlug}`
+  };
 }
 
 function escapeHtml(value) {
@@ -134,22 +124,99 @@ function escapeHtml(value) {
     .replaceAll("'", '&#39;');
 }
 
-function renderInstructorTable() {
-  const tbody = document.querySelector('#instructorTable tbody');
-  const instructors = CEAuth.listInstructors();
+async function apiPost(payload) {
+  const response = await fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  return response.json();
+}
 
+function requireAdminSession() {
+  if (!adminSession) throw new Error('Please log in as admin.');
+  return {
+    adminUsername: adminSession.username,
+    adminPassword: adminSession.password
+  };
+}
+
+async function handleAdminLogin() {
+  const username = document.getElementById('adminUsername').value.trim();
+  const password = document.getElementById('adminPassword').value;
+  const msg = document.getElementById('adminLoginMsg');
+  msg.textContent = '';
+
+  if (!username || !password) {
+    msg.textContent = 'Username and password are required.';
+    return;
+  }
+
+  try {
+    const data = await apiPost({ action: 'adminLogin', username, password });
+    if (!data.ok) {
+      msg.textContent = data.message || 'Login failed.';
+      return;
+    }
+
+    adminSession = {
+      username,
+      password,
+      displayName: data.user?.displayName || username
+    };
+
+    document.getElementById('adminLoginSection').classList.add('hidden');
+    document.getElementById('adminAppSection').classList.remove('hidden');
+    document.getElementById('adminWelcome').textContent = `Signed in as ${adminSession.displayName} (${adminSession.username})`;
+
+    await Promise.all([refreshUsers(), refreshRecords()]);
+  } catch (error) {
+    msg.textContent = `Login error: ${error.message}`;
+  }
+}
+
+function clearInstructorForm() {
+  document.getElementById('formRowNumber').value = '';
+  document.getElementById('instructorForm').reset();
+  document.getElementById('formActive').checked = true;
+  document.getElementById('formMsg').textContent = '';
+}
+
+function generatePasswordForForm() {
+  document.getElementById('formPassword').value = generatePassword(14);
+}
+
+async function refreshUsers() {
+  const auth = requireAdminSession();
+  const data = await apiPost({ action: 'getUsers', ...auth });
+  if (!data.ok) throw new Error(data.error || data.message || 'Unable to load users.');
+
+  const instructors = (data.users || []).filter(u => u.role === 'instructor');
+  renderInstructorTable(instructors);
+  refreshSummary(instructors);
+}
+
+function refreshSummary(instructors) {
+  const active = instructors.filter(i => i.active).length;
+  const inactive = instructors.length - active;
+  document.getElementById('summaryText').textContent = `Instructors: ${instructors.length} total • ${active} active • ${inactive} inactive`;
+}
+
+function renderInstructorTable(instructors) {
+  const tbody = document.querySelector('#instructorTable tbody');
   if (!instructors.length) {
     tbody.innerHTML = '<tr><td colspan="6">No instructor users configured.</td></tr>';
     return;
   }
 
   tbody.innerHTML = instructors.map(i => {
-    const urls = CEAuth.buildInstructorUrls(i.slug);
+    const safeSlug = sanitizeSlug(i.instructorSlug);
+    const urls = buildInstructorUrls(safeSlug);
     return `
       <tr>
         <td>${escapeHtml(i.displayName)}</td>
         <td>${escapeHtml(i.username)}</td>
-        <td>${escapeHtml(i.slug)}</td>
+        <td>${escapeHtml(safeSlug)}</td>
         <td>${i.active ? 'Active' : 'Inactive'}</td>
         <td>
           <div class="url-stack">
@@ -158,127 +225,179 @@ function renderInstructorTable() {
           </div>
         </td>
         <td>
-          <button type="button" onclick="startEdit('${i.id}')">Edit</button>
-          <button type="button" onclick="toggleActive('${i.id}', ${!i.active})">${i.active ? 'Deactivate' : 'Reactivate'}</button>
-          <button type="button" class="danger-btn" onclick="softDelete('${i.id}')">Soft Delete</button>
+          <button type="button" onclick="startEdit(${i.rowNumber}, '${escapeJs(i.displayName)}', '${escapeJs(i.username)}', '${escapeJs(safeSlug)}', ${Boolean(i.active)})">Edit</button>
+          <button type="button" onclick="toggleActive(${i.rowNumber}, ${!i.active})">${i.active ? 'Deactivate' : 'Reactivate'}</button>
         </td>
       </tr>
     `;
   }).join('');
 }
 
+function escapeJs(value) {
+  return String(value || '').replaceAll('\\', '\\\\').replaceAll("'", "\\'");
+}
+
+function startEdit(rowNumber, displayName, username, slug, active) {
+  document.getElementById('formRowNumber').value = rowNumber;
+  document.getElementById('formDisplayName').value = displayName;
+  document.getElementById('formUsername').value = username;
+  document.getElementById('formSlug').value = slug;
+  document.getElementById('formPassword').value = '';
+  document.getElementById('formActive').checked = Boolean(active);
+  document.getElementById('formMsg').textContent = 'Editing existing instructor. Enter password only to reset it.';
+}
+
+async function saveUserFromForm() {
+  const rowNumber = document.getElementById('formRowNumber').value;
+  const displayName = document.getElementById('formDisplayName').value.trim();
+  const username = document.getElementById('formUsername').value.trim();
+  const instructorSlug = sanitizeSlug(document.getElementById('formSlug').value);
+  const password = document.getElementById('formPassword').value;
+  const active = document.getElementById('formActive').checked;
+  const msg = document.getElementById('formMsg');
+  msg.textContent = '';
+
+  if (!displayName || !username || !instructorSlug) {
+    msg.textContent = 'Display name, username, and slug are required.';
+    return;
+  }
+
+  if (!rowNumber && !password) {
+    msg.textContent = 'Password is required for a new instructor user.';
+    return;
+  }
+
+  const auth = requireAdminSession();
+  const payload = {
+    ...auth,
+    role: 'instructor',
+    displayName,
+    username,
+    instructorSlug,
+    active,
+    notes: ''
+  };
+
+  if (password) payload.password = password;
+
+  let data;
+  if (rowNumber) {
+    data = await apiPost({ action: 'updateUser', rowNumber: Number(rowNumber), ...payload });
+  } else {
+    data = await apiPost({ action: 'addUser', ...payload });
+  }
+
+  if (!data.ok) {
+    msg.textContent = data.message || data.error || 'Save failed.';
+    return;
+  }
+
+  clearInstructorForm();
+  await refreshUsers();
+}
+
+async function toggleActive(rowNumber, active) {
+  const auth = requireAdminSession();
+  const data = await apiPost({ action: 'toggleUserActive', rowNumber: Number(rowNumber), active, ...auth });
+  if (!data.ok) {
+    alert(data.message || data.error || 'Unable to update status.');
+    return;
+  }
+
+  await refreshUsers();
+}
+
 async function copyText(text) {
   try {
     await navigator.clipboard.writeText(text);
-    vibrate(20);
   } catch (error) {
     console.warn('Clipboard copy failed', error);
   }
 }
 
-function startEdit(id) {
-  const instructor = CEAuth.listInstructors().find(i => i.id === id);
-  if (!instructor) return;
-
-  document.getElementById('formInstructorId').value = instructor.id;
-  document.getElementById('formDisplayName').value = instructor.displayName;
-  document.getElementById('formSlug').value = instructor.slug;
-  document.getElementById('formUsername').value = instructor.username;
-  document.getElementById('formPassword').value = '';
-  document.getElementById('formActive').checked = Boolean(instructor.active);
-  document.getElementById('formMsg').textContent = 'Editing existing instructor. Enter a new password only if you want to reset it.';
-}
-
-function clearInstructorForm() {
-  document.getElementById('formInstructorId').value = '';
-  document.getElementById('instructorForm').reset();
-  document.getElementById('formActive').checked = true;
-  document.getElementById('formMsg').textContent = '';
-}
-
-function generatePasswordForForm() {
-  document.getElementById('formPassword').value = CEAuth.generatePassword(14);
-}
-
-async function saveInstructorFromForm() {
-  const formMsg = document.getElementById('formMsg');
-  formMsg.textContent = '';
-
-  const payload = {
-    id: document.getElementById('formInstructorId').value,
-    displayName: document.getElementById('formDisplayName').value.trim(),
-    slug: document.getElementById('formSlug').value.trim(),
-    username: document.getElementById('formUsername').value.trim(),
-    password: document.getElementById('formPassword').value,
-    active: document.getElementById('formActive').checked
-  };
-
-  const result = await CEAuth.saveInstructor(payload);
-  if (!result.ok) {
-    formMsg.textContent = result.message;
-    return;
-  }
-
-  clearInstructorForm();
-  renderInstructorTable();
-  refreshSummary();
-}
-
-function toggleActive(id, nextState) {
-  CEAuth.setInstructorActive(id, nextState);
-  renderInstructorTable();
-  refreshSummary();
-}
-
-function softDelete(id) {
-  CEAuth.softDeleteInstructor(id);
-  renderInstructorTable();
-  refreshSummary();
-}
-
 async function refreshRecords() {
-  const div = document.getElementById('records');
-  div.innerHTML = '<p>Loading records...</p>';
+  const recordsDiv = document.getElementById('records');
+  recordsDiv.innerHTML = '<p>Loading records...</p>';
 
   try {
-    const res = await fetch(SHEET_URL);
-    const recs = await res.json();
+    const auth = requireAdminSession();
+    const data = await apiPost({ action: 'getAllRecords', ...auth });
+    if (!data.ok) {
+      recordsDiv.innerHTML = `<p>${escapeHtml(data.error || data.message || 'Error loading records.')}</p>`;
+      return;
+    }
 
+    const recs = data.records || [];
     const grouped = {};
-    recs.forEach(r => {
+    recs.forEach((r, idx) => {
       const day = new Date(r.timestamp).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
       if (!grouped[day]) grouped[day] = [];
-      grouped[day].push(r);
+      grouped[day].push({ ...r, rowGuess: idx + 2 });
     });
 
     const sortedDays = Object.keys(grouped).sort((a,b) => new Date(b) - new Date(a));
-    div.innerHTML = '';
+    recordsDiv.innerHTML = '';
+
+    if (!sortedDays.length) {
+      recordsDiv.innerHTML = '<p>No records found.</p>';
+      return;
+    }
+
     sortedDays.forEach(day => {
       const section = document.createElement('div');
       section.className = 'day-group';
       section.innerHTML = `<h3 class="day-header">${day} (${grouped[day].length})</h3>`;
       const list = document.createElement('div');
       list.className = 'entry-list hidden';
+
       grouped[day].forEach(r => {
         const entry = document.createElement('div');
         entry.className = 'entry';
-        entry.innerHTML = `<p><strong>${escapeHtml(r.codeText)}</strong><br>${new Date(r.timestamp).toLocaleTimeString()}</p>`;
+        entry.innerHTML = `
+          <p><strong>${escapeHtml(r.codeText)}</strong><br>${new Date(r.timestamp).toLocaleTimeString()}<br>Instructor: ${escapeHtml(r.instructor || '')}</p>
+          <div class="record-actions">
+            <button type="button" onclick="deleteByRowPrompt()">Delete Row…</button>
+          </div>
+        `;
+
         if (r.image) {
           const img = new Image();
           img.src = r.image;
           img.width = 100;
           entry.appendChild(img);
         }
+
         list.appendChild(entry);
       });
+
       section.appendChild(list);
       section.querySelector('.day-header').onclick = () => list.classList.toggle('hidden');
-      div.appendChild(section);
+      recordsDiv.appendChild(section);
     });
   } catch (error) {
-    console.error(error);
-    div.innerHTML = '<p>Error loading data.</p>';
+    recordsDiv.innerHTML = `<p>${escapeHtml(error.message || 'Error loading records.')}</p>`;
   }
+}
+
+async function deleteByRowPrompt() {
+  const rowInput = prompt('Enter Submissions sheet row number to delete (2+).');
+  if (!rowInput) return;
+
+  const rowNumber = Number(rowInput);
+  if (!rowNumber || rowNumber < 2) {
+    alert('Please enter a valid row number (2 or higher).');
+    return;
+  }
+
+  const query = new URLSearchParams({ deleteRow: String(rowNumber) });
+  const response = await fetch(`${API_URL}?${query.toString()}`);
+  const data = await response.json();
+  if (!data.ok) {
+    alert(data.error || 'Delete failed.');
+    return;
+  }
+
+  await refreshRecords();
 }
 
 function exportPDF() {
@@ -309,15 +428,12 @@ function exportPDF() {
 }
 
 function logout() {
-  CEAuth.logoutAdmin();
+  adminSession = null;
   clearInstructorForm();
-  renderForSession();
+  document.getElementById('adminPassword').value = '';
+  document.getElementById('adminAppSection').classList.add('hidden');
+  document.getElementById('adminLoginSection').classList.remove('hidden');
 }
-
-window.onload = () => {
-  CEAuth.ensureStore();
-  renderForSession();
-};
 </script>
 </body>
 </html>
