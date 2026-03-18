@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Instructor Dashboard | Martinsville Fire & EMS CE Portal</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="auth.js"></script>
 <style>
   body {
     margin: 0;
@@ -33,54 +34,30 @@
     animation: fadeIn 1s ease;
   }
   @keyframes fadeIn {
-    from {opacity: 0; transform: scale(0.95);}
-    to {opacity: 1; transform: scale(1);}
-  }
-  h1 {
-    text-align: center;
-    color: #ff4c4c;
-    font-family: 'Oswald', sans-serif;
-    margin-bottom: 10px;
-  }
-  .controls {
-    text-align: center;
-    margin-bottom: 20px;
-  }
+    from {opacity: 0; transform: scale(0.95);} to {opacity: 1; transform: scale(1);} }
+  h1 { text-align: center; color: #ff4c4c; font-family: 'Oswald', sans-serif; margin-bottom: 10px; }
+  .controls { text-align: center; margin-bottom: 20px; }
+  .subtle { text-align: center; color: #ffc3c3; margin: 8px 0; }
   button {
-    background: #b22222;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    padding: 10px 16px;
-    margin: 5px;
-    font-size: 15px;
-    cursor: pointer;
-    transition: 0.3s;
+    background: #b22222; color: white; border: none; border-radius: 6px;
+    padding: 10px 16px; margin: 5px; font-size: 15px; cursor: pointer; transition: 0.3s;
   }
   button:hover { background: #ff4c4c; transform: scale(1.05); }
+  input {
+    margin: 6px 0; padding: 10px; width: 100%; font-size: 16px;
+    border-radius: 5px; border: none; text-align: left; box-sizing: border-box;
+  }
   .record {
-    border-bottom: 1px solid #ff4c4c;
-    padding: 10px 0;
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
+    border-bottom: 1px solid #ff4c4c; padding: 10px 0; display: flex; align-items: center; flex-wrap: wrap;
   }
   .record img {
-    width: 90px;
-    margin-right: 15px;
-    border-radius: 6px;
-    box-shadow: 0 0 10px rgba(255, 76, 76, 0.4);
+    width: 90px; margin-right: 15px; border-radius: 6px; box-shadow: 0 0 10px rgba(255, 76, 76, 0.4);
   }
-  .record-info {
-    flex: 1;
-  }
+  .record-info { flex: 1; }
   .record-info strong { color: #ff4c4c; }
-  footer {
-    text-align: center;
-    color: #ff4c4c;
-    margin-top: 20px;
-    font-size: 0.8em;
-  }
+  .hidden { display: none; }
+  .error-text { color: #ff8080; text-align: center; min-height: 20px; }
+  footer { text-align: center; color: #ff4c4c; margin-top: 20px; font-size: 0.8em; }
 </style>
 </head>
 
@@ -88,37 +65,99 @@
   <div class="overlay"></div>
   <div class="container">
     <h1>Instructor Dashboard</h1>
-    <div class="controls">
-      <button onclick="refreshData()">🔄 Refresh</button>
-      <button onclick="exportPDF()">📄 Export PDF</button>
-      <button onclick="logout()">🚪 Logout</button>
+
+    <div id="loginPanel">
+      <p class="subtle">Use your instructor username + password. URL instructor ID is validated after login.</p>
+      <input type="text" id="instructorUsername" placeholder="Instructor Username" autocomplete="username" />
+      <input type="password" id="instructorPassword" placeholder="Instructor Password" autocomplete="current-password" />
+      <div class="controls">
+        <button onclick="loginInstructor()">Login</button>
+      </div>
+      <p id="loginMsg" class="error-text"></p>
     </div>
-    <div id="records"><p>Loading student records...</p></div>
+
+    <div id="dashboardPanel" class="hidden">
+      <p id="sessionInfo" class="subtle"></p>
+      <div class="controls">
+        <button onclick="refreshData()">🔄 Refresh</button>
+        <button onclick="exportPDF()">📄 Export PDF</button>
+        <button onclick="logout()">🚪 Logout</button>
+      </div>
+      <div id="records"><p>Loading student records...</p></div>
+    </div>
+
     <footer>© 2025 Martinsville Fire & EMS • CE Instructor Portal</footer>
   </div>
 
 <script>
 const SHEET_URL = "https://script.google.com/macros/s/AKfycbz4fAjnjqfybEBRVnFhQcnAnlOfyRUlYP5f34yZMUjaaSsBwRzPmaK6tfWFsB4kha-6/exec";
 
-async function refreshData() {
+function requestedSlugFromUrl() {
   const urlParams = new URLSearchParams(window.location.search);
-  const instructorID = urlParams.get("instructor") || "Unknown";
-  const recordsDiv = document.getElementById("records");
-  recordsDiv.innerHTML = "<p>Loading student records...</p>";
+  return CEAuth.sanitizeSlug(urlParams.get('instructor') || '');
+}
+
+function showDashboardForSession() {
+  const session = CEAuth.getInstructorSession();
+  if (!session) {
+    document.getElementById('dashboardPanel').classList.add('hidden');
+    document.getElementById('loginPanel').classList.remove('hidden');
+    return;
+  }
+
+  const requestedSlug = requestedSlugFromUrl();
+  if (requestedSlug && requestedSlug !== session.slug) {
+    CEAuth.logoutInstructor();
+    document.getElementById('loginMsg').textContent = 'Session does not match this instructor URL. Please log in again.';
+    document.getElementById('dashboardPanel').classList.add('hidden');
+    document.getElementById('loginPanel').classList.remove('hidden');
+    return;
+  }
+
+  document.getElementById('sessionInfo').textContent = `Signed in as ${session.displayName} (${session.username}) • Instructor ID: ${session.slug}`;
+  document.getElementById('dashboardPanel').classList.remove('hidden');
+  document.getElementById('loginPanel').classList.add('hidden');
+  refreshData();
+}
+
+async function loginInstructor() {
+  const username = document.getElementById('instructorUsername').value.trim();
+  const password = document.getElementById('instructorPassword').value;
+  const requestedSlug = requestedSlugFromUrl();
+
+  const result = await CEAuth.loginInstructor(username, password, requestedSlug);
+  if (!result.ok) {
+    document.getElementById('loginMsg').textContent = result.message;
+    return;
+  }
+
+  document.getElementById('loginMsg').textContent = '';
+  showDashboardForSession();
+}
+
+async function refreshData() {
+  const session = CEAuth.getInstructorSession();
+  const recordsDiv = document.getElementById('records');
+  if (!session) {
+    recordsDiv.innerHTML = '<p>Please log in first.</p>';
+    return;
+  }
+
+  recordsDiv.innerHTML = '<p>Loading student records...</p>';
 
   try {
-    const res = await fetch(`${SHEET_URL}?instructor=${instructorID}`);
+    const res = await fetch(`${SHEET_URL}?instructor=${encodeURIComponent(session.slug)}`);
     const data = await res.json();
 
     if (!data.length) {
-      recordsDiv.innerHTML = "<p>No student submissions found for this instructor.</p>";
+      recordsDiv.innerHTML = '<p>No student submissions found for this instructor.</p>';
       return;
     }
 
-    recordsDiv.innerHTML = "";
+    recordsDiv.innerHTML = '';
     data.forEach(r => {
-      const div = document.createElement("div");
-      div.className = "record";
+      const div = document.createElement('div');
+      div.className = 'record';
       div.innerHTML = `
         <img src="${r.image}" alt="QR">
         <div class="record-info">
@@ -131,7 +170,7 @@ async function refreshData() {
     });
   } catch (err) {
     console.error(err);
-    recordsDiv.innerHTML = "<p>Error loading records.</p>";
+    recordsDiv.innerHTML = '<p>Error loading records.</p>';
   }
 }
 
@@ -140,10 +179,10 @@ function exportPDF() {
   const doc = new jsPDF();
   let y = 20;
   doc.setFontSize(16);
-  doc.text("Instructor CE Records", 10, 10);
+  doc.text('Instructor CE Records', 10, 10);
 
-  document.querySelectorAll(".record-info").forEach(info => {
-    const lines = info.innerText.split("\n");
+  document.querySelectorAll('.record-info').forEach(info => {
+    const lines = info.innerText.split('\n');
     lines.forEach(line => {
       doc.text(line.trim(), 10, y);
       y += 8;
@@ -154,14 +193,19 @@ function exportPDF() {
     });
     y += 4;
   });
-  doc.save("Instructor_CE_Records.pdf");
+  doc.save('Instructor_CE_Records.pdf');
 }
 
 function logout() {
-  window.location.href = "index.html";
+  CEAuth.logoutInstructor();
+  document.getElementById('instructorPassword').value = '';
+  showDashboardForSession();
 }
 
-window.onload = refreshData;
+window.onload = () => {
+  CEAuth.ensureStore();
+  showDashboardForSession();
+};
 </script>
 </body>
 </html>
