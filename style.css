@@ -244,6 +244,14 @@ footer {
   border-bottom: 1px solid #444;
   padding: 8px 0;
 }
+.record-actions {
+  margin-top: 6px;
+}
+.record-actions button {
+  margin-top: 0;
+  padding: 6px 10px;
+  font-size: 13px;
+}
 .hidden { display: none; }
 
 /* ===== MOBILE OPTIMIZATION ===== */
