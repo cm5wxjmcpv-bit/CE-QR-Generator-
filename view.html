@@ -3,49 +3,243 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>MFD CE Records – Admin</title>
+<title>MFD CE Records – Main Admin</title>
 <link rel="stylesheet" href="style.css" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="auth.js"></script>
 </head>
 <body class="admin-body">
   <div class="admin-container fade-in">
-    <h1>Martinsville Fire & EMS<br>CE Record Admin Panel</h1>
+    <h1>Martinsville Fire & EMS<br>CE Main Admin Portal</h1>
 
-    <div id="login">
-      <p>Enter Password:</p>
-      <input type="password" id="pw" />
-      <button onclick="checkPW()">Login</button>
-      <p id="loginMsg" style="color:red;"></p>
+    <div id="adminLoginSection" class="panel">
+      <h2>Admin Login</h2>
+      <p class="subtle">Default demo admin: <code>admin</code> / <code>ChangeMeNow!123</code> (change after first login).</p>
+      <div class="inline-form two-col">
+        <input type="text" id="adminUsername" placeholder="Admin Username" autocomplete="username" />
+        <input type="password" id="adminPassword" placeholder="Admin Password" autocomplete="current-password" />
+      </div>
+      <button onclick="handleAdminLogin()">Login</button>
+      <p id="adminLoginMsg" class="error-text"></p>
     </div>
 
-    <div id="admin" class="hidden">
-      <button onclick="exportPDF()">Export All to PDF</button>
-      <button onclick="logout()">Logout</button>
-      <div id="records"></div>
+    <div id="adminAppSection" class="hidden">
+      <div class="toolbar">
+        <div id="adminWelcome" class="subtle"></div>
+        <button onclick="logout()">Logout</button>
+      </div>
+
+      <section class="panel" id="summaryPanel">
+        <h2>Dashboard Summary</h2>
+        <div id="summaryText" class="subtle"></div>
+      </section>
+
+      <section class="panel">
+        <h2>Instructor User Management</h2>
+        <p class="subtle">Passwords are stored as browser-side hashes. Only create instructor accounts on trusted admin devices.</p>
+        <form id="instructorForm" onsubmit="event.preventDefault(); saveInstructorFromForm();">
+          <input type="hidden" id="formInstructorId" />
+          <div class="inline-form two-col">
+            <input type="text" id="formDisplayName" placeholder="Instructor Display Name" required />
+            <input type="text" id="formSlug" placeholder="Instructor ID / slug (ex: medic-1)" required />
+            <input type="text" id="formUsername" placeholder="Username" required autocomplete="off" />
+            <input type="password" id="formPassword" placeholder="Password (required for new user)" autocomplete="new-password" />
+          </div>
+          <div class="inline-form">
+            <label class="checkbox-label"><input type="checkbox" id="formActive" checked /> Active</label>
+            <button type="button" onclick="generatePasswordForForm()">Generate Password</button>
+            <button type="submit">Save Instructor</button>
+            <button type="button" onclick="clearInstructorForm()">Cancel Edit</button>
+          </div>
+          <p id="formMsg" class="error-text"></p>
+        </form>
+
+        <div class="table-wrap">
+          <table class="admin-table" id="instructorTable">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Username</th>
+                <th>Slug</th>
+                <th>Status</th>
+                <th>Instructor URLs</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Existing CE Record Tools</h2>
+        <div class="inline-form">
+          <button onclick="refreshRecords()">🔄 Refresh</button>
+          <button onclick="exportPDF()">📄 Export All to PDF</button>
+        </div>
+        <div id="records"></div>
+      </section>
     </div>
   </div>
 
 <script>
 const SHEET_URL = "https://script.google.com/macros/s/AKfycbz4fAjnjqfybEBRVnFhQcnAnlOfyRUlYP5f34yZMUjaaSsBwRzPmaK6tfWFsB4kha-6/exec";
-const realPW = "Firefighter522539";
 
 function vibrate(ms=30){ if("vibrate" in navigator) navigator.vibrate(ms); }
 
-function checkPW() {
-  vibrate(30);
-  const p = document.getElementById('pw').value.trim();
-  if (p === realPW) {
-    document.getElementById('login').classList.add('hidden');
-    document.getElementById('admin').classList.remove('hidden');
-    loadRecords();
-  } else {
-    document.getElementById('loginMsg').innerText = "Incorrect password.";
+async function handleAdminLogin() {
+  const username = document.getElementById('adminUsername').value.trim();
+  const password = document.getElementById('adminPassword').value;
+  const msg = document.getElementById('adminLoginMsg');
+  msg.textContent = '';
+
+  const result = await CEAuth.loginAdmin(username, password);
+  if (!result.ok) {
+    msg.textContent = result.message;
+    return;
+  }
+
+  renderForSession();
+}
+
+function renderForSession() {
+  const session = CEAuth.getAdminSession();
+  if (!session) {
+    document.getElementById('adminLoginSection').classList.remove('hidden');
+    document.getElementById('adminAppSection').classList.add('hidden');
+    return;
+  }
+
+  document.getElementById('adminLoginSection').classList.add('hidden');
+  document.getElementById('adminAppSection').classList.remove('hidden');
+  document.getElementById('adminWelcome').textContent = `Signed in as ${session.displayName} (${session.username})`;
+  renderInstructorTable();
+  refreshSummary();
+  refreshRecords();
+}
+
+function refreshSummary() {
+  const instructors = CEAuth.listInstructors();
+  const active = instructors.filter(i => i.active).length;
+  const inactive = instructors.length - active;
+  document.getElementById('summaryText').textContent = `Instructors: ${instructors.length} total • ${active} active • ${inactive} inactive`;
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+function renderInstructorTable() {
+  const tbody = document.querySelector('#instructorTable tbody');
+  const instructors = CEAuth.listInstructors();
+
+  if (!instructors.length) {
+    tbody.innerHTML = '<tr><td colspan="6">No instructor users configured.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = instructors.map(i => {
+    const urls = CEAuth.buildInstructorUrls(i.slug);
+    return `
+      <tr>
+        <td>${escapeHtml(i.displayName)}</td>
+        <td>${escapeHtml(i.username)}</td>
+        <td>${escapeHtml(i.slug)}</td>
+        <td>${i.active ? 'Active' : 'Inactive'}</td>
+        <td>
+          <div class="url-stack">
+            <div class="url-row"><span>Public:</span><code>${escapeHtml(urls.publicUrl)}</code><button type="button" onclick="copyText('${urls.publicUrl}')">Copy</button></div>
+            <div class="url-row"><span>Dashboard:</span><code>${escapeHtml(urls.dashboardUrl)}</code><button type="button" onclick="copyText('${urls.dashboardUrl}')">Copy</button></div>
+          </div>
+        </td>
+        <td>
+          <button type="button" onclick="startEdit('${i.id}')">Edit</button>
+          <button type="button" onclick="toggleActive('${i.id}', ${!i.active})">${i.active ? 'Deactivate' : 'Reactivate'}</button>
+          <button type="button" class="danger-btn" onclick="softDelete('${i.id}')">Soft Delete</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    vibrate(20);
+  } catch (error) {
+    console.warn('Clipboard copy failed', error);
   }
 }
 
-async function loadRecords() {
+function startEdit(id) {
+  const instructor = CEAuth.listInstructors().find(i => i.id === id);
+  if (!instructor) return;
+
+  document.getElementById('formInstructorId').value = instructor.id;
+  document.getElementById('formDisplayName').value = instructor.displayName;
+  document.getElementById('formSlug').value = instructor.slug;
+  document.getElementById('formUsername').value = instructor.username;
+  document.getElementById('formPassword').value = '';
+  document.getElementById('formActive').checked = Boolean(instructor.active);
+  document.getElementById('formMsg').textContent = 'Editing existing instructor. Enter a new password only if you want to reset it.';
+}
+
+function clearInstructorForm() {
+  document.getElementById('formInstructorId').value = '';
+  document.getElementById('instructorForm').reset();
+  document.getElementById('formActive').checked = true;
+  document.getElementById('formMsg').textContent = '';
+}
+
+function generatePasswordForForm() {
+  document.getElementById('formPassword').value = CEAuth.generatePassword(14);
+}
+
+async function saveInstructorFromForm() {
+  const formMsg = document.getElementById('formMsg');
+  formMsg.textContent = '';
+
+  const payload = {
+    id: document.getElementById('formInstructorId').value,
+    displayName: document.getElementById('formDisplayName').value.trim(),
+    slug: document.getElementById('formSlug').value.trim(),
+    username: document.getElementById('formUsername').value.trim(),
+    password: document.getElementById('formPassword').value,
+    active: document.getElementById('formActive').checked
+  };
+
+  const result = await CEAuth.saveInstructor(payload);
+  if (!result.ok) {
+    formMsg.textContent = result.message;
+    return;
+  }
+
+  clearInstructorForm();
+  renderInstructorTable();
+  refreshSummary();
+}
+
+function toggleActive(id, nextState) {
+  CEAuth.setInstructorActive(id, nextState);
+  renderInstructorTable();
+  refreshSummary();
+}
+
+function softDelete(id) {
+  CEAuth.softDeleteInstructor(id);
+  renderInstructorTable();
+  refreshSummary();
+}
+
+async function refreshRecords() {
   const div = document.getElementById('records');
-  div.innerHTML = "<p>Loading records...</p>";
+  div.innerHTML = '<p>Loading records...</p>';
+
   try {
     const res = await fetch(SHEET_URL);
     const recs = await res.json();
@@ -58,60 +252,72 @@ async function loadRecords() {
     });
 
     const sortedDays = Object.keys(grouped).sort((a,b) => new Date(b) - new Date(a));
-    div.innerHTML = "";
+    div.innerHTML = '';
     sortedDays.forEach(day => {
       const section = document.createElement('div');
-      section.className = "day-group";
-      section.innerHTML = `<h2 class="day-header">${day} (${grouped[day].length})</h2>`;
+      section.className = 'day-group';
+      section.innerHTML = `<h3 class="day-header">${day} (${grouped[day].length})</h3>`;
       const list = document.createElement('div');
-      list.className = "entry-list hidden";
+      list.className = 'entry-list hidden';
       grouped[day].forEach(r => {
-        const e = document.createElement('div');
-        e.className = "entry";
-        e.innerHTML = `<p><strong>${r.codeText}</strong><br>${new Date(r.timestamp).toLocaleTimeString()}</p>`;
+        const entry = document.createElement('div');
+        entry.className = 'entry';
+        entry.innerHTML = `<p><strong>${escapeHtml(r.codeText)}</strong><br>${new Date(r.timestamp).toLocaleTimeString()}</p>`;
         if (r.image) {
           const img = new Image();
           img.src = r.image;
           img.width = 100;
-          e.appendChild(img);
+          entry.appendChild(img);
         }
-        list.appendChild(e);
+        list.appendChild(entry);
       });
       section.appendChild(list);
-      section.querySelector(".day-header").onclick = () => list.classList.toggle("hidden");
+      section.querySelector('.day-header').onclick = () => list.classList.toggle('hidden');
       div.appendChild(section);
     });
-  } catch (err) {
-    div.innerHTML = "<p>Error loading data.</p>";
+  } catch (error) {
+    console.error(error);
+    div.innerHTML = '<p>Error loading data.</p>';
   }
 }
 
 function exportPDF() {
-  vibrate(30);
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
   let y = 20;
   doc.setFontSize(14);
-  doc.text("Martinsville Fire & EMS CE Records", 10, 10);
+  doc.text('Martinsville Fire & EMS CE Records', 10, 10);
 
-  document.querySelectorAll(".entry").forEach(e => {
-    const txt = e.querySelector("strong")?.innerText || "";
-    const ts = e.querySelector("p")?.innerText || "";
-    const img = e.querySelector("img");
+  document.querySelectorAll('.entry').forEach(entry => {
+    const txt = entry.querySelector('strong')?.innerText || '';
+    const ts = entry.querySelector('p')?.innerText || '';
+    const img = entry.querySelector('img');
+
     doc.text(txt, 10, y); y += 8;
     doc.text(ts, 10, y); y += 8;
-    if (img) { doc.addImage(img.src, "PNG", 10, y, 30, 30); y += 35; }
-    if (y > 270) { doc.addPage(); y = 20; }
+    if (img) {
+      doc.addImage(img.src, 'PNG', 10, y, 30, 30);
+      y += 35;
+    }
+    if (y > 270) {
+      doc.addPage();
+      y = 20;
+    }
   });
-  doc.save("MFD_CE_Records.pdf");
+
+  doc.save('MFD_CE_Records.pdf');
 }
 
 function logout() {
-  vibrate(30);
-  document.getElementById('admin').classList.add('hidden');
-  document.getElementById('login').classList.remove('hidden');
-  document.getElementById('pw').value = '';
+  CEAuth.logoutAdmin();
+  clearInstructorForm();
+  renderForSession();
 }
+
+window.onload = () => {
+  CEAuth.ensureStore();
+  renderForSession();
+};
 </script>
 </body>
 </html>

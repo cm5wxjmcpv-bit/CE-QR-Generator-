@@ -44,9 +44,14 @@ body {
 /* ===== HEADINGS ===== */
 h1 {
   font-family: 'Oswald', sans-serif;
-  color: #ff4c4c; /* red instead of yellow */
+  color: #ff4c4c;
   margin-bottom: 10px;
   font-size: 1.6em;
+}
+
+h2 {
+  color: #ff9a9a;
+  margin-top: 0;
 }
 
 p.desc {
@@ -108,14 +113,119 @@ footer {
   background: #0b1c2c;
   color: white;
   display: block;
+  min-height: 100vh;
+  height: auto;
 }
 
 .admin-container {
-  max-width: 800px;
+  max-width: 1040px;
   margin: 30px auto;
   background: rgba(0,0,0,0.85);
   padding: 20px;
   border-radius: 10px;
+}
+
+.panel {
+  background: rgba(11, 28, 44, 0.7);
+  border: 1px solid rgba(255, 76, 76, 0.25);
+  border-radius: 8px;
+  padding: 14px;
+  margin-bottom: 14px;
+}
+
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.inline-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.inline-form.two-col input {
+  width: calc(50% - 4px);
+  text-align: left;
+}
+
+.inline-form input[type="checkbox"] {
+  width: auto;
+}
+
+.checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.subtle {
+  color: #ffcccc;
+  font-size: 0.95em;
+}
+
+.error-text {
+  color: #ff9b9b;
+  min-height: 18px;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+}
+
+.admin-table th,
+.admin-table td {
+  border: 1px solid rgba(255, 76, 76, 0.3);
+  padding: 8px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.admin-table code {
+  display: inline-block;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 4px;
+  padding: 2px 6px;
+  word-break: break-all;
+  max-width: 450px;
+}
+
+.url-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.url-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.url-row span {
+  width: 80px;
+  flex: 0 0 80px;
+  color: #ff9999;
+}
+
+.url-row button {
+  margin-top: 0;
+  padding: 6px 10px;
+  font-size: 13px;
+}
+
+.danger-btn {
+  background: #6b0000;
 }
 
 .day-header {
@@ -147,4 +257,9 @@ footer {
   .admin-container { margin: 10px; padding: 15px; overflow-y: auto; max-height: 90vh; }
   .day-header { font-size: 1em; padding: 6px 8px; }
   .entry img { width: 80px; }
+
+  .toolbar { flex-direction: column; align-items: stretch; }
+  .inline-form.two-col input { width: 100%; }
+  .url-row { flex-direction: column; align-items: flex-start; }
+  .url-row span { width: auto; flex: initial; }
 }
