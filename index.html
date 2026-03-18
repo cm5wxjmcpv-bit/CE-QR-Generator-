@@ -144,7 +144,8 @@ async function submitForm() {
       };
 
       fetch(SHEET_URL, {
-        method: "POST", mode: "no-cors",
+        method: "POST",
+        mode: "no-cors",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       }).catch(err => console.log("Error posting:", err));
