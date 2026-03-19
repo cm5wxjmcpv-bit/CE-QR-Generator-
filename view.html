@@ -128,16 +128,10 @@ async function apiGet(params) {
     throw new Error("Network failure. Check script URL, deployment, or connection.");
   }
 
-  let text;
-  try {
-    text = await res.text();
-  } catch (err) {
-    throw new Error("Unable to read response from server.");
-  }
-
+  const text = await res.text();
   try {
     return JSON.parse(text);
-  } catch (err) {
+  } catch {
     throw new Error(`Invalid JSON from server: ${text}`);
   }
 }
@@ -147,24 +141,16 @@ async function apiPost(payload) {
   try {
     res = await fetch(SCRIPT_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
     });
   } catch (err) {
     throw new Error("Network failure. Check script URL, deployment, or connection.");
   }
 
-  let text;
-  try {
-    text = await res.text();
-  } catch (err) {
-    throw new Error("Unable to read response from server.");
-  }
-
+  const text = await res.text();
   try {
     return JSON.parse(text);
-  } catch (err) {
-    if (text === "Success") return { ok: true };
+  } catch {
     throw new Error(`Invalid JSON from server: ${text}`);
   }
 }
@@ -206,14 +192,15 @@ async function adminLogin() {
       password
     });
 
-    if (data.ok && data.user && data.user.role === "admin") {
+    const user = data && data.data && data.data.user ? data.data.user : null;
+    if (data.ok && user && user.role === "admin") {
       setSession({
         username,
         password,
-        displayName: data.user.displayName || username
+        displayName: user.displayName || username
       });
 
-      document.getElementById("welcomeText").textContent = `Logged in as ${data.user.displayName || username}`;
+      document.getElementById("welcomeText").textContent = `Logged in as ${user.displayName || username}`;
       document.getElementById("loginCard").classList.add("hidden");
       document.getElementById("adminApp").classList.remove("hidden");
       msg.textContent = "";
@@ -223,7 +210,7 @@ async function adminLogin() {
     }
 
     msg.className = "status-text error-text";
-    msg.textContent = data.error || data.message || "Invalid admin credentials.";
+    msg.textContent = data.error || "Invalid admin credentials.";
   } catch (err) {
     msg.className = "status-text error-text";
     msg.textContent = err.message || "Login failed.";
@@ -245,7 +232,7 @@ async function loadUsers() {
       return;
     }
 
-    const users = Array.isArray(data.users) ? data.users : [];
+    const users = Array.isArray(data.data && data.data.users) ? data.data.users : [];
     if (!users.length) {
       wrap.innerHTML = "<p>No users found.</p>";
       return;
@@ -258,6 +245,7 @@ async function loadUsers() {
             <tr>
               <th>Display</th>
               <th>Username</th>
+              <th>Password</th>
               <th>Role</th>
               <th>Slug</th>
               <th>Active</th>
@@ -277,6 +265,7 @@ async function loadUsers() {
         <tr>
           <td>${escapeHtml(user.displayName || "")}</td>
           <td>${escapeHtml(user.username || "")}</td>
+          <td>${escapeHtml(user.password || "")}</td>
           <td>${escapeHtml(user.role || "")}</td>
           <td>${escapeHtml(slug)}</td>
           <td>${user.active ? "Yes" : "No"}</td>
@@ -324,7 +313,7 @@ async function loadRecords() {
       return;
     }
 
-    const recs = Array.isArray(data.records) ? data.records : [];
+    const recs = Array.isArray(data.data && data.data.records) ? data.data.records : [];
     if (!recs.length) {
       div.innerHTML = "<p>No records found.</p>";
       return;
@@ -493,7 +482,7 @@ function fillUserForm(user) {
   if (!user) return;
   document.getElementById("displayName").value = user.displayName || "";
   document.getElementById("username").value = user.username || "";
-  document.getElementById("password").value = "";
+  document.getElementById("password").value = user.password || "";
   document.getElementById("role").value = user.role || "instructor";
   document.getElementById("slug").value = user.instructorSlug || "";
   document.getElementById("active").value = String(!!user.active);

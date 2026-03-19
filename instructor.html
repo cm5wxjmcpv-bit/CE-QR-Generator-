@@ -185,11 +185,7 @@ function qs(params) {
 async function apiGet(params) {
   const res = await fetch(`${SCRIPT_URL}?${qs(params)}`, { method: "GET", cache: "no-store" });
   const text = await res.text();
-  try {
-    return JSON.parse(text);
-  } catch {
-    throw new Error(`Invalid JSON from server: ${text}`);
-  }
+  return JSON.parse(text);
 }
 
 function getSession() {
@@ -228,17 +224,19 @@ async function loginInstructor() {
       password
     });
 
-    if (!data.ok) {
+    if (!data.ok || !data.data || !data.data.user) {
       msg.className = "status error";
       msg.textContent = data.error || "Invalid instructor login.";
       return;
     }
 
+    const user = data.data.user;
+
     setSession({
       username,
       password,
-      displayName: data.displayName || username,
-      instructorSlug: data.instructorSlug || ""
+      displayName: user.displayName || username,
+      instructorSlug: user.instructorSlug || ""
     });
 
     msg.className = "status success";
@@ -274,7 +272,7 @@ async function refreshData() {
       return;
     }
 
-    const records = Array.isArray(data.records) ? data.records : [];
+    const records = Array.isArray(data.data && data.data.records) ? data.data.records : [];
     if (!records.length) {
       recordsDiv.innerHTML = "<p>No student submissions found for this instructor.</p>";
       return;
