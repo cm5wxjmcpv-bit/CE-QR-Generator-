@@ -100,6 +100,9 @@ async function apiGet(params = {}) {
 async function apiPost(payload = {}) {
   const res = await fetch(SHEET_URL, {
     method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
     body: JSON.stringify(payload)
   });
   const text = await res.text();
@@ -141,7 +144,7 @@ async function submitForm() {
       return;
     }
 
-    if (duplicateData.data && duplicateData.data.duplicate) {
+    if (duplicateData.duplicate) {
       msg.innerText = "⚠️ You’ve already submitted your CE record today.";
       msg.classList.add('alert');
       vibrate(100);
