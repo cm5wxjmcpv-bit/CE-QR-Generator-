@@ -11,7 +11,7 @@ function doGet(e) {
     const action = String(params.action || '').trim();
 
     if (!action) {
-      return jsonResponse({ ok: true, data: { records: getAllRecordsRaw_() } });
+      return jsonResponse({ ok: true, records: getAllRecordsRaw_() });
     }
 
     switch (action) {
@@ -72,14 +72,12 @@ function handleAdminLogin_(params) {
 
   return jsonResponse({
     ok: true,
-    data: {
-      user: {
-        username: user.username,
-        displayName: user.displayName,
-        role: user.role,
-        instructorSlug: user.instructorSlug,
-        active: user.active
-      }
+    user: {
+      username: user.username,
+      displayName: user.displayName,
+      role: user.role,
+      instructorSlug: user.instructorSlug,
+      active: user.active
     }
   });
 }
@@ -96,14 +94,12 @@ function handleInstructorLogin_(params) {
 
   return jsonResponse({
     ok: true,
-    data: {
-      user: {
-        username: user.username,
-        displayName: user.displayName,
-        role: user.role,
-        instructorSlug: user.instructorSlug,
-        active: user.active
-      }
+    user: {
+      username: user.username,
+      displayName: user.displayName,
+      role: user.role,
+      instructorSlug: user.instructorSlug,
+      active: user.active
     }
   });
 }
@@ -113,7 +109,7 @@ function handleGetUsers_(params) {
     return jsonResponse({ ok: false, error: 'Unauthorized.' });
   }
 
-  return jsonResponse({ ok: true, data: { users: readUsers_() } });
+  return jsonResponse({ ok: true, users: readUsers_() });
 }
 
 function handleGetAllRecords_(params) {
@@ -121,7 +117,7 @@ function handleGetAllRecords_(params) {
     return jsonResponse({ ok: false, error: 'Unauthorized.' });
   }
 
-  return jsonResponse({ ok: true, data: { records: getAllRecordsRaw_() } });
+  return jsonResponse({ ok: true, records: getAllRecordsRaw_() });
 }
 
 function handleGetInstructorRecords_(params) {
@@ -139,7 +135,7 @@ function handleGetInstructorRecords_(params) {
       clean_(r.instructor).toLowerCase() === clean_(user.username).toLowerCase();
   });
 
-  return jsonResponse({ ok: true, data: { records: records } });
+  return jsonResponse({ ok: true, records: records });
 }
 
 function handleDeleteRow_(params) {
@@ -169,7 +165,7 @@ function handleCheckDuplicate_(params) {
     return clean_(r.codeText).toUpperCase() === codeText && dateKey_(new Date(r.timestamp)) === todayKey;
   });
 
-  return jsonResponse({ ok: true, data: { duplicate: duplicate } });
+  return jsonResponse({ ok: true, duplicate: duplicate });
 }
 
 function handleSubmitRecord_(payload) {
@@ -209,9 +205,7 @@ function handleSubmitRecord_(payload) {
 
   return jsonResponse({
     ok: true,
-    data: {
-      codeText: codeText
-    }
+    codeText: codeText
   });
 }
 
