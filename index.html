@@ -97,14 +97,29 @@ async function apiGet(params = {}) {
   return JSON.parse(text);
 }
 
-/* ✅ FIXED apiPost ONLY */
 async function apiPost(payload = {}) {
   const res = await fetch(SHEET_URL, {
     method: "POST",
     body: JSON.stringify(payload)
   });
+
   const text = await res.text();
-  return JSON.parse(text);
+
+  try {
+    return JSON.parse(text);
+  } catch (err) {
+    const trimmed = String(text || "").trim();
+
+    if (/^(ok|success|submitted|saved)\b/i.test(trimmed)) {
+      return { ok: true, message: trimmed };
+    }
+
+    if (trimmed.startsWith("<!DOCTYPE") || trimmed.startsWith("<html")) {
+      throw new Error("Invalid server response.");
+    }
+
+    throw new Error(trimmed || "Invalid server response.");
+  }
 }
 
 function getCodeText(first, last, cert) {
@@ -170,8 +185,8 @@ async function submitForm() {
 
     const submitData = await apiPost(payload);
 
-    if (!submitData.ok) {
-      msg.innerText = submitData.error || "⚠️ Submission failed. Please try again.";
+    if (!(submitData && (submitData.ok === true || submitData.success === true))) {
+      msg.innerText = (submitData && submitData.error) ? submitData.error : "⚠️ Submission failed. Please try again.";
       msg.classList.add('alert');
       vibrate(100);
       return;
@@ -185,7 +200,7 @@ async function submitForm() {
 
   } catch (err) {
     console.error("Error:", err);
-    msg.innerText = "⚠️ Submission failed. Please try again later.";
+    msg.innerText = err.message || "⚠️ Submission failed. Please try again later.";
     msg.classList.add('alert');
   }
 }
