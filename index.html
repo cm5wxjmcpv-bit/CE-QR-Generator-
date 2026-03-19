@@ -90,6 +90,26 @@ document.getElementById("ceForm").addEventListener("submit", function(e){
   submitForm();
 });
 
+async function apiGet(params = {}) {
+  const url = `${SHEET_URL}?${new URLSearchParams(params).toString()}`;
+  const res = await fetch(url, { method: "GET", cache: "no-store" });
+  const text = await res.text();
+  return JSON.parse(text);
+}
+
+async function apiPost(payload = {}) {
+  const res = await fetch(SHEET_URL, {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+  const text = await res.text();
+  return JSON.parse(text);
+}
+
+function getCodeText(first, last, cert) {
+  return `${cert}${last}|${first}`;
+}
+
 async function submitForm() {
   vibrate(50);
   const f = document.getElementById('first').value.trim().toUpperCase();
@@ -106,20 +126,22 @@ async function submitForm() {
 
   const urlParams = new URLSearchParams(window.location.search);
   const instructorID = urlParams.get("instructor") || "Unknown";
-  const codeText = `${c}${l}|${f}`;
-  const today = new Date().toLocaleDateString('en-US');
+  const codeText = getCodeText(f, l, c);
   msg.innerText = "Checking for existing record...";
 
   try {
-    const res = await fetch(SHEET_URL);
-    const recs = await res.json();
-
-    const duplicate = recs.find(r => {
-      const rDate = new Date(r.timestamp).toLocaleDateString('en-US');
-      return r.codeText === codeText && rDate === today;
+    const duplicateData = await apiGet({
+      action: "checkDuplicate",
+      codeText
     });
 
-    if (duplicate) {
+    if (!duplicateData.ok) {
+      msg.innerText = duplicateData.error || "Unable to check duplicates. Please try again.";
+      msg.classList.add('alert');
+      return;
+    }
+
+    if (duplicateData.data && duplicateData.data.duplicate) {
       msg.innerText = "⚠️ You’ve already submitted your CE record today.";
       msg.classList.add('alert');
       vibrate(100);
@@ -130,36 +152,38 @@ async function submitForm() {
     const qrDiv = document.createElement("div");
     new QRCode(qrDiv, { text: codeText, width: 200, height: 200 });
 
-    setTimeout(() => {
-      const imgEl = qrDiv.querySelector("img");
-      const imgData = imgEl ? imgEl.src : "";
-      const payload = {
-        instructor: instructorID,
-        firstName: f,
-        lastName: l,
-        certNumber: c,
-        codeText: codeText,
-        image: imgData,
-        timestamp: new Date().toISOString()
-      };
+    await new Promise(resolve => setTimeout(resolve, 600));
 
-      fetch(SHEET_URL, {
-        method: "POST",
-        mode: "no-cors",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      }).catch(err => console.log("Error posting:", err));
+    const imgEl = qrDiv.querySelector("img");
+    const imgData = imgEl ? imgEl.src : "";
+    const payload = {
+      action: "submitRecord",
+      instructor: instructorID,
+      firstName: f,
+      lastName: l,
+      certNumber: c,
+      codeText,
+      image: imgData,
+      timestamp: new Date().toISOString()
+    };
 
-      msg.innerText = "✅ Submission received — your CE record has been logged.";
-      msg.classList.remove('alert');
-      document.getElementById('first').value = "";
-      document.getElementById('last').value = "";
-      document.getElementById('cert').value = "";
-    }, 600);
+    const submitData = await apiPost(payload);
 
+    if (!submitData.ok) {
+      msg.innerText = submitData.error || "⚠️ Submission failed. Please try again.";
+      msg.classList.add('alert');
+      vibrate(100);
+      return;
+    }
+
+    msg.innerText = "✅ Submission received — your CE record has been logged.";
+    msg.classList.remove('alert');
+    document.getElementById('first').value = "";
+    document.getElementById('last').value = "";
+    document.getElementById('cert').value = "";
   } catch (err) {
     console.error("Error:", err);
-    msg.innerText = "⚠️ Unable to verify. Please try again later.";
+    msg.innerText = "⚠️ Submission failed. Please try again later.";
     msg.classList.add('alert');
   }
 }
