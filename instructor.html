@@ -224,13 +224,13 @@ async function loginInstructor() {
       password
     });
 
-    if (!data.ok || !data.data || !data.data.user) {
+    if (!data.ok || !data.user) {
       msg.className = "status error";
       msg.textContent = data.error || "Invalid instructor login.";
       return;
     }
 
-    const user = data.data.user;
+    const user = data.user;
 
     setSession({
       username,
@@ -272,7 +272,7 @@ async function refreshData() {
       return;
     }
 
-    const records = Array.isArray(data.data && data.data.records) ? data.data.records : [];
+    const records = Array.isArray(data.records) ? data.records : [];
     if (!records.length) {
       recordsDiv.innerHTML = "<p>No student submissions found for this instructor.</p>";
       return;
