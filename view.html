@@ -192,7 +192,7 @@ async function adminLogin() {
       password
     });
 
-    const user = data && data.data && data.data.user ? data.data.user : null;
+    const user = data && data.user ? data.user : null;
     if (data.ok && user && user.role === "admin") {
       setSession({
         username,
@@ -232,7 +232,7 @@ async function loadUsers() {
       return;
     }
 
-    const users = Array.isArray(data.data && data.data.users) ? data.data.users : [];
+    const users = Array.isArray(data.users) ? data.users : [];
     if (!users.length) {
       wrap.innerHTML = "<p>No users found.</p>";
       return;
@@ -313,7 +313,7 @@ async function loadRecords() {
       return;
     }
 
-    const recs = Array.isArray(data.data && data.data.records) ? data.data.records : [];
+    const recs = Array.isArray(data.records) ? data.records : [];
     if (!recs.length) {
       div.innerHTML = "<p>No records found.</p>";
       return;
