@@ -97,11 +97,10 @@ async function apiGet(params = {}) {
   return JSON.parse(text);
 }
 
+/* ✅ FIXED apiPost ONLY */
 async function apiPost(payload = {}) {
   const res = await fetch(SHEET_URL, {
     method: "POST",
-    body: JSON.stringify(payload)
-  });
     body: JSON.stringify(payload)
   });
   const text = await res.text();
@@ -183,6 +182,7 @@ async function submitForm() {
     document.getElementById('first').value = "";
     document.getElementById('last').value = "";
     document.getElementById('cert').value = "";
+
   } catch (err) {
     console.error("Error:", err);
     msg.innerText = "⚠️ Submission failed. Please try again later.";
