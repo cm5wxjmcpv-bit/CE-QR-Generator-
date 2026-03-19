@@ -289,12 +289,43 @@ async function refreshData() {
           <p>${new Date(r.timestamp).toLocaleString()}</p>
           <p>Instructor: ${escapeHtml(r.instructor || "")}</p>
           <p class="code-line">${escapeHtml(r.codeText || "")}</p>
+          <button onclick="deleteInstructorRecord(${Number(r.row)})">Delete Record</button>
         </div>
       `;
       recordsDiv.appendChild(div);
     });
   } catch (err) {
     recordsDiv.innerHTML = `<p class="error">${err.message || "Error loading records."}</p>`;
+  }
+}
+
+async function deleteInstructorRecord(row) {
+  const session = getSession();
+  if (!session || !session.username || !session.password) {
+    alert("Please log in again.");
+    return;
+  }
+
+  if (!confirm(`Delete record row ${row}?`)) {
+    return;
+  }
+
+  try {
+    const data = await apiGet({
+      action: "deleteInstructorRecord",
+      username: session.username,
+      password: session.password,
+      row: row
+    });
+
+    if (!data.ok) {
+      alert(data.error || "Delete failed.");
+      return;
+    }
+
+    await refreshData();
+  } catch (err) {
+    alert(err.message || "Delete failed.");
   }
 }
 
