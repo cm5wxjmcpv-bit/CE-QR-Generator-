@@ -1,6 +1,6 @@
 const ADMIN_TOKEN = 'Martinsvilleadmin2026!';
 const USERS_SHEET = 'Users';
-const RECORDS_SHEET = 'CE_Records';
+const RECORDS_SHEET = 'Submissions';
 
 const USER_HEADERS = ['displayName', 'username', 'password', 'role', 'instructorSlug', 'active', 'notes'];
 const RECORD_HEADERS = ['timestamp', 'instructor', 'studentFirst', 'studentLast', 'certNumber', 'codeText', 'image'];
@@ -155,7 +155,11 @@ function handleDeleteRow_(params) {
 }
 
 function handleCheckDuplicate_(params) {
-  const codeText = clean_(params.codeText).toUpperCase();
+  const cert = clean_(params.certNumber).toUpperCase();
+  const last = clean_(params.lastName).toUpperCase();
+  const first = clean_(params.firstName).toUpperCase();
+  const codeText = clean_(params.codeText).toUpperCase() || (cert && last && first ? `${cert}${last}|${first}` : '');
+
   if (!codeText) return jsonResponse({ ok: false, error: 'Missing codeText.' });
 
   const todayKey = dateKey_(new Date());
