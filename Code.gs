@@ -27,6 +27,8 @@ function doGet(e) {
         return handleGetInstructorRecords_(params);
       case 'delete':
         return handleDeleteRow_(params);
+      case 'deleteInstructorRecord':
+        return handleDeleteInstructorRecord_(params);
       case 'checkDuplicate':
         return handleCheckDuplicate_(params);
       default:
@@ -131,8 +133,7 @@ function handleGetInstructorRecords_(params) {
   }
 
   const records = getAllRecordsRaw_().filter(function (r) {
-    return clean_(r.instructor).toLowerCase() === clean_(user.instructorSlug).toLowerCase() ||
-      clean_(r.instructor).toLowerCase() === clean_(user.username).toLowerCase();
+    return recordBelongsToInstructorUser_(r, user);
   });
 
   return jsonResponse({ ok: true, records: records });
@@ -149,6 +150,46 @@ function handleDeleteRow_(params) {
   const sh = getOrCreateSheet_(RECORDS_SHEET, RECORD_HEADERS);
   const lastRow = sh.getLastRow();
   if (row > lastRow) return jsonResponse({ ok: false, error: 'Row does not exist.' });
+
+  sh.deleteRow(row);
+  return jsonResponse({ ok: true });
+}
+
+function handleDeleteInstructorRecord_(params) {
+  const username = clean_(params.username);
+  const password = clean_(params.password);
+  const row = Number(params.row);
+
+  if (!username || !password) {
+    return jsonResponse({ ok: false, error: 'Missing credentials.' });
+  }
+
+  if (!row || row < 2) {
+    return jsonResponse({ ok: false, error: 'Invalid row.' });
+  }
+
+  const user = findUserByUsername_(username);
+  if (!user || !user.active || user.password !== password || user.role !== 'instructor') {
+    return jsonResponse({ ok: false, error: 'Unauthorized.' });
+  }
+
+  const sh = getOrCreateSheet_(RECORDS_SHEET, RECORD_HEADERS);
+  const lastRow = sh.getLastRow();
+  if (row > lastRow) {
+    return jsonResponse({ ok: false, error: 'Row does not exist.' });
+  }
+
+  const record = getAllRecordsRaw_().find(function (r) {
+    return Number(r.row) === row;
+  });
+
+  if (!record) {
+    return jsonResponse({ ok: false, error: 'Record not found.' });
+  }
+
+  if (!recordBelongsToInstructorUser_(record, user)) {
+    return jsonResponse({ ok: false, error: 'You can only delete your own records.' });
+  }
 
   sh.deleteRow(row);
   return jsonResponse({ ok: true });
@@ -352,6 +393,14 @@ function findUserByUsername_(username) {
   return readUsers_().find(function (u) {
     return clean_(u.username).toLowerCase() === target;
   }) || null;
+}
+
+function recordBelongsToInstructorUser_(record, user) {
+  const recordInstructor = clean_(record.instructor).toLowerCase();
+  const userSlug = clean_(user.instructorSlug).toLowerCase();
+  const username = clean_(user.username).toLowerCase();
+
+  return recordInstructor === userSlug || recordInstructor === username;
 }
 
 function normalizeUserInput_(payload, requirePassword) {
