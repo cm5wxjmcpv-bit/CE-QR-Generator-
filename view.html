@@ -6,6 +6,33 @@
 <title>Martinsville Fire & EMS CE Admin</title>
 <link rel="stylesheet" href="style.css" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+<style>
+  .entry-side img {
+    width: 140px;
+    height: 140px;
+    object-fit: contain;
+    display: block;
+    margin-bottom: 8px;
+    background: #ffffff;
+    padding: 8px;
+    border-radius: 6px;
+    box-shadow: none;
+  }
+
+  .qr-slot {
+    width: 156px;
+    min-height: 156px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #ffffff;
+    color: #111111;
+    border-radius: 6px;
+    margin-bottom: 8px;
+  }
+</style>
 </head>
 <body class="admin-body">
   <div class="admin-page-wrap">
@@ -153,6 +180,85 @@ async function apiPost(payload) {
   } catch {
     throw new Error(`Invalid JSON from server: ${text}`);
   }
+}
+
+function wait(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function loadImage(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
+async function makeScannableQrDataUrl(text, size = 256, quietZone = 32) {
+  if (!text) return "";
+
+  const holder = document.createElement("div");
+  holder.style.position = "fixed";
+  holder.style.left = "-9999px";
+  holder.style.top = "-9999px";
+  holder.style.background = "#ffffff";
+  document.body.appendChild(holder);
+
+  new QRCode(holder, {
+    text,
+    width: size,
+    height: size,
+    colorDark: "#000000",
+    colorLight: "#ffffff",
+    correctLevel: QRCode.CorrectLevel.H
+  });
+
+  await wait(300);
+
+  const imgEl = holder.querySelector("img");
+  const canvasEl = holder.querySelector("canvas");
+  const sourceData = imgEl ? imgEl.src : (canvasEl ? canvasEl.toDataURL("image/png") : "");
+  holder.remove();
+
+  if (!sourceData) return "";
+
+  const qrImage = await loadImage(sourceData);
+  const out = document.createElement("canvas");
+  out.width = size + quietZone * 2;
+  out.height = size + quietZone * 2;
+  const ctx = out.getContext("2d");
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, out.width, out.height);
+  ctx.drawImage(qrImage, quietZone, quietZone, size, size);
+  return out.toDataURL("image/png");
+}
+
+async function renderRecordQrCodes() {
+  const slots = Array.from(document.querySelectorAll(".qr-slot[data-code]"));
+  for (const slot of slots) {
+    const codeText = slot.dataset.code || "";
+    const fallbackImage = slot.dataset.image || "";
+    try {
+      const src = await makeScannableQrDataUrl(codeText);
+      if (src) {
+        slot.innerHTML = `<img src="${src}" alt="QR" />`;
+      } else if (fallbackImage) {
+        slot.innerHTML = `<img src="${fallbackImage}" alt="QR" />`;
+      }
+    } catch (err) {
+      if (fallbackImage) {
+        slot.innerHTML = `<img src="${fallbackImage}" alt="QR" />`;
+      }
+    }
+  }
+}
+
+function collectEntryForPdf(entry) {
+  const img = entry.querySelector(".qr-slot img, img");
+  const main = entry.querySelector(".entry-main");
+  const lines = main ? main.innerText.split("\n").map(s => s.trim()).filter(Boolean) : [];
+  return { image: img ? img.src : "", lines };
 }
 
 function getSession() {
@@ -356,7 +462,9 @@ async function loadRecords() {
             <p class="code-line">${escapeHtml(r.codeText || "")}</p>
           </div>
           <div class="entry-side">
-            ${r.image ? `<img src="${r.image}" alt="QR" />` : ""}
+            <div class="qr-slot" data-code="${escapeHtml(r.codeText || "")}" data-image="${escapeHtml(r.image || "")}">
+              ${r.image ? `<img src="${escapeHtml(r.image)}" alt="QR" />` : "QR"}
+            </div>
             <button class="small-btn danger-btn" onclick="deleteRow(${Number(r.row)})">Delete Row ${Number(r.row)}</button>
           </div>
         `;
@@ -368,6 +476,8 @@ async function loadRecords() {
       section.appendChild(list);
       div.appendChild(section);
     });
+
+    await renderRecordQrCodes();
   } catch (err) {
     div.innerHTML = `<p class="error-text">${err.message || "Unable to load records."}</p>`;
   }
@@ -505,27 +615,44 @@ function clearUserForm(clearMsg = true) {
   }
 }
 
-function exportPDF() {
+async function exportPDF() {
+  await renderRecordQrCodes();
+
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
-  let y = 15;
+  let y = 18;
 
   doc.setFontSize(16);
-  doc.text("Martinsville Fire & EMS CE Records", 10, y);
-  y += 10;
+  doc.text("Martinsville Fire & EMS CE Records", 10, 10);
 
-  document.querySelectorAll(".entry").forEach(entry => {
-    const lines = entry.innerText.split("\n").map(s => s.trim()).filter(Boolean);
-    lines.forEach(line => {
-      doc.setFontSize(10);
-      doc.text(line, 10, y);
-      y += 6;
-      if (y > 275) {
-        doc.addPage();
-        y = 15;
+  const entries = Array.from(document.querySelectorAll(".entry"));
+  entries.forEach(entry => {
+    const rec = collectEntryForPdf(entry);
+
+    if (y > 230) {
+      doc.addPage();
+      y = 18;
+    }
+
+    if (rec.image) {
+      try {
+        doc.addImage(rec.image, "PNG", 10, y, 35, 35);
+      } catch (err) {
+        // If the image cannot be embedded, keep exporting the text record.
       }
+    }
+
+    let textY = y + 4;
+    rec.lines.forEach(line => {
+      doc.setFontSize(10);
+      const wrapped = doc.splitTextToSize(line, 145);
+      wrapped.forEach(wrappedLine => {
+        doc.text(wrappedLine, 52, textY);
+        textY += 6;
+      });
     });
-    y += 4;
+
+    y = Math.max(y + 42, textY + 6);
   });
 
   doc.save("MFD_CE_Records.pdf");
