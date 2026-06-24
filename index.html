@@ -16,62 +16,69 @@
     background-size: cover;
     min-height: 100vh;
     color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
   .overlay {
-    position: fixed; top: 0; left: 0;
-    width: 100%; height: 100%;
-    background: rgba(0,0,0,0.6); z-index: 1;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.6);
+    z-index: 1;
   }
-  .page-shell {
+  .container {
     position: relative;
     z-index: 2;
-    min-height: 100vh;
-    display: grid;
-    grid-template-columns: minmax(280px, 380px) minmax(300px, 420px);
-    gap: 24px;
-    align-items: start;
-    justify-content: center;
-    padding: 36px 20px;
-  }
-  .container, .shift-panel {
     background: rgba(11,28,44,0.92);
     padding: 28px;
     border-radius: 12px;
     box-shadow: 0 0 20px rgba(0,0,0,0.8);
     animation: fadeIn 1s ease;
-  }
-  .container {
     text-align: center;
-    width: 100%;
+    width: 90%;
     max-width: 420px;
-  }
-  .shift-panel {
-    width: 100%;
-    min-height: 520px;
   }
   @keyframes fadeIn { from{opacity:0;transform:scale(0.95);} to{opacity:1;transform:scale(1);} }
   .logo { width:100px; border-radius:50%; margin-bottom:10px; box-shadow:0 0 8px #ff4c4c; }
   h1 { font-family:'Oswald',sans-serif; color:#ff4c4c; margin-bottom:8px; }
-  h2 { font-family:'Oswald',sans-serif; color:#ff4c4c; margin:0 0 10px; }
-  p.desc, .shift-help { color:#ffb0b0; font-size:0.95em; margin-bottom:15px; }
+  p.desc { color:#ffb0b0; font-size:0.95em; margin-bottom:15px; }
   input {
-    margin:6px 0; padding:10px; width:90%; font-size:16px;
-    border-radius:5px; border:none; text-align:center;
+    margin:6px 0;
+    padding:10px;
+    width:90%;
+    font-size:16px;
+    border-radius:5px;
+    border:none;
+    text-align:center;
   }
   button {
-    margin-top:10px; padding:12px 20px; font-size:16px;
-    border:none; border-radius:8px; background:#b22222; color:white;
-    cursor:pointer; transition:background 0.3s ease, transform 0.1s ease;
+    margin-top:10px;
+    padding:12px 20px;
+    font-size:16px;
+    border:none;
+    border-radius:8px;
+    background:#b22222;
+    color:white;
+    cursor:pointer;
+    transition:background 0.3s ease, transform 0.1s ease;
   }
   button:hover { background:#ff4c4c; transform:scale(1.05); }
   #message { margin-top:12px; font-weight:bold; min-height:24px; transition:all 0.3s ease; }
   .alert {
-    background:rgba(255,76,76,0.1); border:1px solid #ff4c4c;
-    padding:8px; border-radius:6px; color:#ff4c4c;
+    background:rgba(255,76,76,0.1);
+    border:1px solid #ff4c4c;
+    padding:8px;
+    border-radius:6px;
+    color:#ff4c4c;
     animation:pulse 0.8s ease;
   }
   @keyframes pulse {
-    0%{transform:scale(1);opacity:0.8;}50%{transform:scale(1.05);opacity:1;}100%{transform:scale(1);opacity:0.9;}
+    0%{transform:scale(1);opacity:0.8;}
+    50%{transform:scale(1.05);opacity:1;}
+    100%{transform:scale(1);opacity:0.9;}
   }
   footer { font-size:0.8em; color:#ff4c4c; margin-top:20px; }
   .qr-builder {
@@ -83,78 +90,10 @@
     overflow: hidden;
     background: #ffffff;
   }
-  .shift-tabs {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 8px;
-    margin: 14px 0;
-  }
-  .shift-tab {
-    width: 100%;
-    text-align: left;
-    margin: 0;
-    padding: 12px 14px;
-    border-radius: 10px;
-    background: rgba(255,255,255,0.08);
-    border: 1px solid rgba(255,255,255,0.12);
-    color: white;
-  }
-  .shift-tab:hover, .shift-tab.active {
-    background: #b22222;
-    border-color: #ff4c4c;
-    transform: none;
-  }
-  .shift-list {
-    margin-top: 16px;
-    display: grid;
-    gap: 12px;
-  }
-  .shift-card {
-    display: grid;
-    grid-template-columns: 112px 1fr;
-    gap: 12px;
-    align-items: center;
-    background: rgba(255,255,255,0.08);
-    border: 1px solid rgba(255,255,255,0.12);
-    border-radius: 12px;
-    padding: 12px;
-  }
-  .shift-card .qr-box {
-    background: white;
-    border-radius: 8px;
-    padding: 8px;
-    width: 108px;
-    min-height: 108px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .shift-card h3 {
-    margin: 0 0 4px;
-    font-size: 1.05em;
-  }
-  .shift-card p {
-    margin: 3px 0;
-    color: #f0dede;
-    font-size: 0.9em;
-    word-break: break-word;
-  }
-  .empty-state, .shift-status {
-    color: #f0dede;
-    border: 1px dashed rgba(255,255,255,0.22);
-    border-radius: 10px;
-    padding: 12px;
-    background: rgba(255,255,255,0.05);
-  }
-  .shift-status { margin-top: 10px; font-size: 0.9em; }
-  @media (max-width:800px){
-    .page-shell{grid-template-columns:1fr; padding:20px 14px;}
-    .shift-panel{min-height:auto;}
-  }
   @media (max-width:600px){
-    .container, .shift-panel{padding:20px;} .logo{width:80px;} h1{font-size:1.2em;line-height:1.3em;}
-    .shift-card{grid-template-columns:1fr; text-align:center;}
-    .shift-card .qr-box{margin:0 auto;}
+    .container{padding:20px;}
+    .logo{width:80px;}
+    h1{font-size:1.2em;line-height:1.3em;}
   }
 </style>
 </head>
@@ -162,47 +101,24 @@
 <body>
   <div class="overlay"></div>
 
-  <main class="page-shell">
-    <section class="shift-panel" aria-label="Saved shift QR codes">
-      <h2>Shift QR Codes</h2>
-      <p class="shift-help">Select a shift to view saved QR codes. This side is view-only.</p>
-      <div class="shift-tabs" id="shiftTabs"></div>
-      <div class="shift-status" id="shiftStatus">Loading shift QR codes...</div>
-      <div class="shift-list" id="shiftList"></div>
-    </section>
+  <section class="container">
+    <img src="ABE9E472-6FA5-46E6-866D-992B713B5B5B.JPG" class="logo" alt="MFD Logo">
+    <h1>Martinsville<br>Fire & EMS</h1>
+    <p class="desc">Continuing Education Attendance Portal</p>
 
-    <section class="container">
-      <img src="ABE9E472-6FA5-46E6-866D-992B713B5B5B.JPG" class="logo" alt="MFD Logo">
-      <h1>Martinsville<br>Fire & EMS</h1>
-      <p class="desc">Continuing Education Attendance Portal</p>
+    <form id="ceForm">
+      <input id="first" placeholder="First Name" required />
+      <input id="last" placeholder="Last Name" required />
+      <input id="cert" placeholder="Certification #" required />
+      <button type="submit" id="submitBtn">Submit</button>
+    </form>
 
-      <form id="ceForm">
-        <input id="first" placeholder="First Name" required />
-        <input id="last" placeholder="Last Name" required />
-        <input id="cert" placeholder="Certification #" required />
-        <button type="submit" id="submitBtn">Submit</button>
-      </form>
-
-      <div id="message"></div>
-      <footer>© 2026 Martinsville Fire & EMS • CE Portal v4.0</footer>
-    </section>
-  </main>
+    <div id="message"></div>
+    <footer>© 2026 Martinsville Fire & EMS • CE Portal v4.0</footer>
+  </section>
 
 <script>
 const SHEET_URL = "https://script.google.com/macros/s/AKfycbyQMrRpj21lEC3hJnmDWWHPKlmBX9N13Lfto_rC8m_BNzH4DM1W8_JwylsRRIUy-xBA/exec";
-
-const SHIFT_GROUPS = [
-  { id: "a-shift", label: "A Shift" },
-  { id: "b-shift", label: "B Shift" },
-  { id: "c-shift", label: "C Shift" },
-  { id: "admin", label: "Admin" },
-  { id: "transport", label: "Transport" }
-];
-
-const DEFAULT_SHIFT_TABS = SHIFT_GROUPS.map(shift => ({ ...shift, members: [] }));
-let shiftTabs = DEFAULT_SHIFT_TABS;
-let activeShiftId = "a-shift";
-let renderRun = 0;
 
 function vibrate(ms=30){ if("vibrate" in navigator) navigator.vibrate(ms); }
 
@@ -212,38 +128,6 @@ function getCodeText(first, last, cert) {
 
 function wait(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-function normalizeText(value) {
-  return String(value || "").trim();
-}
-
-function normalizeShiftData(incoming) {
-  const byId = new Map();
-  const rawShifts = Array.isArray(incoming) ? incoming : [];
-
-  rawShifts.forEach(shift => {
-    if (!shift) return;
-    const id = normalizeText(shift.id || shift.shiftId).toLowerCase();
-    const members = Array.isArray(shift.members) ? shift.members : [];
-    byId.set(id, members);
-  });
-
-  return SHIFT_GROUPS.map(group => {
-    const members = (byId.get(group.id) || [])
-      .map(member => {
-        const firstName = normalizeText(member.firstName || member.first || member.FirstName).toUpperCase();
-        const lastName = normalizeText(member.lastName || member.last || member.LastName).toUpperCase();
-        const certNumber = normalizeText(member.certNumber || member.cert || member.CertNumber).toUpperCase();
-        const displayName = normalizeText(member.displayName || member.name || `${firstName} ${lastName}`).trim();
-        const codeText = normalizeText(member.codeText || member.CodeText || (firstName && lastName && certNumber ? getCodeText(firstName, lastName, certNumber) : "")).toUpperCase();
-
-        return { firstName, lastName, certNumber, displayName, codeText };
-      })
-      .filter(member => member.displayName || member.codeText);
-
-    return { ...group, members };
-  });
 }
 
 document.getElementById("ceForm").addEventListener("submit", function(e){
@@ -271,7 +155,7 @@ async function apiPost(payload = {}) {
   } catch (err) {
     const trimmed = String(text || "").trim();
 
-    if (/^(ok|success|submitted|saved)\b/i.test(trimmed)) {
+    if (/^(ok|success|submitted|saved)/i.test(trimmed)) {
       return { ok: true, message: trimmed };
     }
 
@@ -328,106 +212,6 @@ async function makeScannableQrDataUrl(text, size = 256, quietZone = 32) {
   ctx.drawImage(qrImage, quietZone, quietZone, size, size);
 
   return out.toDataURL("image/png");
-}
-
-function createInlineQr(text, size = 92) {
-  const qrBox = document.createElement("div");
-  qrBox.className = "qr-box";
-
-  if (!text) {
-    qrBox.textContent = "No QR";
-    return qrBox;
-  }
-
-  new QRCode(qrBox, {
-    text,
-    width: size,
-    height: size,
-    colorDark: "#000000",
-    colorLight: "#ffffff",
-    correctLevel: QRCode.CorrectLevel.H
-  });
-
-  return qrBox;
-}
-
-function renderShiftTabs() {
-  const tabs = document.getElementById("shiftTabs");
-  tabs.innerHTML = "";
-
-  shiftTabs.forEach(shift => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = `shift-tab${shift.id === activeShiftId ? " active" : ""}`;
-    button.textContent = `${shift.label} (${shift.members.length})`;
-    button.addEventListener("click", () => {
-      activeShiftId = shift.id;
-      renderShiftTabs();
-      renderShiftList();
-    });
-    tabs.appendChild(button);
-  });
-}
-
-function renderShiftList() {
-  const runId = ++renderRun;
-  const list = document.getElementById("shiftList");
-  const activeShift = shiftTabs.find(shift => shift.id === activeShiftId) || shiftTabs[0];
-  list.innerHTML = "";
-
-  if (!activeShift || !activeShift.members.length) {
-    const empty = document.createElement("div");
-    empty.className = "empty-state";
-    empty.textContent = "No QR codes are loaded for this tab yet.";
-    list.appendChild(empty);
-    return;
-  }
-
-  activeShift.members.forEach(member => {
-    if (runId !== renderRun) return;
-    const card = document.createElement("article");
-    card.className = "shift-card";
-
-    card.appendChild(createInlineQr(member.codeText));
-
-    const info = document.createElement("div");
-    const name = document.createElement("h3");
-    name.textContent = member.displayName || `${member.firstName} ${member.lastName}`.trim() || "Saved QR";
-    const cert = document.createElement("p");
-    cert.textContent = member.certNumber ? `Cert #: ${member.certNumber}` : "Cert #: Not entered";
-    const code = document.createElement("p");
-    code.textContent = member.codeText ? `QR Text: ${member.codeText}` : "QR Text: Not entered";
-
-    info.appendChild(name);
-    info.appendChild(cert);
-    info.appendChild(code);
-    card.appendChild(info);
-    list.appendChild(card);
-  });
-}
-
-async function loadShiftTabs() {
-  const status = document.getElementById("shiftStatus");
-  status.textContent = "Loading shift QR codes...";
-
-  try {
-    const data = await apiGet({ action: "getShiftQRCodes", t: Date.now() });
-
-    if (data && data.ok && Array.isArray(data.shifts)) {
-      shiftTabs = normalizeShiftData(data.shifts);
-      status.textContent = "Shift QR codes loaded.";
-    } else {
-      shiftTabs = DEFAULT_SHIFT_TABS;
-      status.textContent = "Shift tabs are ready. Add QR codes from the admin side.";
-    }
-  } catch (err) {
-    console.warn("Shift QR data is not available yet:", err);
-    shiftTabs = DEFAULT_SHIFT_TABS;
-    status.textContent = "Shift tabs are ready. Add QR codes from the admin side.";
-  }
-
-  renderShiftTabs();
-  renderShiftList();
 }
 
 async function submitForm() {
@@ -502,8 +286,6 @@ async function submitForm() {
     msg.classList.add('alert');
   }
 }
-
-loadShiftTabs();
 </script>
 </body>
 </html>
