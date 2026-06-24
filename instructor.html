@@ -29,7 +29,7 @@
     margin: 30px auto;
     padding: 28px;
     border-radius: 12px;
-    max-width: 900px;
+    max-width: 1150px;
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
     animation: fadeIn 1s ease;
   }
@@ -54,6 +54,97 @@
     border-radius: 12px;
     padding: 20px;
     margin-top: 18px;
+  }
+  .login-box {
+    max-width: 760px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .instructor-shell {
+    display: grid;
+    grid-template-columns: minmax(260px, 340px) 1fr;
+    gap: 18px;
+    align-items: start;
+  }
+  .shift-panel, .records-panel {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 16px;
+  }
+  .shift-panel h2 {
+    text-align: left;
+  }
+  .shift-help {
+    color: #f3d5d5;
+    font-size: 0.92rem;
+    margin: 0 0 12px;
+  }
+  .shift-tabs {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+    margin: 12px 0;
+  }
+  .shift-tab {
+    width: 100%;
+    text-align: left;
+    margin: 0;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.12);
+  }
+  .shift-tab.active {
+    background: #b22222;
+    border-color: #ff4c4c;
+    transform: none;
+  }
+  .shift-status, .empty-state {
+    color: #f0dede;
+    border: 1px dashed rgba(255,255,255,0.22);
+    border-radius: 10px;
+    padding: 10px;
+    background: rgba(255,255,255,0.05);
+    font-size: 0.9rem;
+  }
+  .shift-status {
+    margin-top: 10px;
+  }
+  .shift-list {
+    margin-top: 12px;
+    display: grid;
+    gap: 12px;
+  }
+  .shift-card {
+    display: grid;
+    grid-template-columns: 104px 1fr;
+    gap: 10px;
+    align-items: center;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 12px;
+    padding: 10px;
+  }
+  .shift-card .qr-box {
+    background: #ffffff;
+    border-radius: 8px;
+    padding: 8px;
+    width: 100px;
+    min-height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #111111;
+  }
+  .shift-card h3 {
+    margin: 0 0 4px;
+    color: #ffffff;
+    font-size: 1rem;
+  }
+  .shift-card p {
+    margin: 3px 0;
+    color: #f0dede;
+    font-size: 0.88rem;
+    word-break: break-word;
   }
   .form-grid {
     display: grid;
@@ -145,10 +236,15 @@
     margin-top: 20px;
     font-size: 0.8em;
   }
+  @media (max-width: 900px) {
+    .instructor-shell { grid-template-columns: 1fr; }
+  }
   @media (max-width: 700px) {
     .container { margin: 16px; padding: 18px; }
     .form-grid { grid-template-columns: 1fr; }
     button { width: 100%; margin: 6px 0; }
+    .shift-card { grid-template-columns: 1fr; text-align: center; }
+    .shift-card .qr-box { margin: 0 auto; }
   }
 </style>
 </head>
@@ -178,12 +274,24 @@
     </div>
 
     <div id="recordsBox" class="records-box hidden">
-      <div class="controls">
-        <button onclick="refreshData()">🔄 Refresh</button>
-        <button onclick="exportPDF()">📄 Export PDF</button>
-        <button onclick="logout()">🚪 Logout</button>
+      <div class="instructor-shell">
+        <aside class="shift-panel" aria-label="Read only shift QR codes">
+          <h2>Shift QR Codes</h2>
+          <p class="shift-help">Read-only shift list. Select a shift to open the QR codes for scanning.</p>
+          <div id="shiftTabs" class="shift-tabs"></div>
+          <div id="shiftStatus" class="shift-status">Loading shift QR codes...</div>
+          <div id="shiftList" class="shift-list"></div>
+        </aside>
+
+        <section class="records-panel">
+          <div class="controls">
+            <button onclick="refreshData(); loadInstructorShiftTabs();">🔄 Refresh</button>
+            <button onclick="exportPDF()">📄 Export PDF</button>
+            <button onclick="logout()">🚪 Logout</button>
+          </div>
+          <div id="records"><p>Loading student records...</p></div>
+        </section>
       </div>
-      <div id="records"><p>Loading student records...</p></div>
     </div>
 
     <footer>© 2025 Martinsville Fire & EMS • CE Instructor Portal</footer>
@@ -191,6 +299,19 @@
 
 <script>
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyQMrRpj21lEC3hJnmDWWHPKlmBX9N13Lfto_rC8m_BNzH4DM1W8_JwylsRRIUy-xBA/exec";
+
+const SHIFT_GROUPS = [
+  { id: "a-shift", label: "A Shift" },
+  { id: "b-shift", label: "B Shift" },
+  { id: "c-shift", label: "C Shift" },
+  { id: "admin", label: "Admin" },
+  { id: "transport", label: "Transport" }
+];
+
+const DEFAULT_SHIFT_TABS = SHIFT_GROUPS.map(shift => ({ ...shift, members: [] }));
+let instructorShiftTabs = JSON.parse(JSON.stringify(DEFAULT_SHIFT_TABS));
+let activeShiftId = "a-shift";
+let shiftRenderRun = 0;
 
 function qs(params) {
   return new URLSearchParams(params).toString();
@@ -212,6 +333,41 @@ function loadImage(src) {
     img.onload = () => resolve(img);
     img.onerror = reject;
     img.src = src;
+  });
+}
+
+function normalizeText(value) {
+  return String(value || "").trim();
+}
+
+function getCodeText(first, last, cert) {
+  return `${cert}${last}|${first}`;
+}
+
+function normalizeShiftData(incoming) {
+  const byId = new Map();
+  const rawShifts = Array.isArray(incoming) ? incoming : [];
+
+  rawShifts.forEach(shift => {
+    if (!shift) return;
+    const id = normalizeText(shift.id || shift.shiftId).toLowerCase();
+    const members = Array.isArray(shift.members) ? shift.members : [];
+    byId.set(id, members);
+  });
+
+  return SHIFT_GROUPS.map(group => {
+    const members = (byId.get(group.id) || [])
+      .map(member => {
+        const firstName = normalizeText(member.firstName || member.first || member.FirstName).toUpperCase();
+        const lastName = normalizeText(member.lastName || member.last || member.LastName).toUpperCase();
+        const certNumber = normalizeText(member.certNumber || member.cert || member.CertNumber).toUpperCase();
+        const displayName = normalizeText(member.displayName || member.name || `${firstName} ${lastName}`).trim();
+        const codeText = normalizeText(member.codeText || member.CodeText || (firstName && lastName && certNumber ? getCodeText(firstName, lastName, certNumber) : "")).toUpperCase();
+        return { firstName, lastName, certNumber, displayName, codeText };
+      })
+      .filter(member => member.displayName || member.codeText);
+
+    return { ...group, members };
   });
 }
 
@@ -252,6 +408,111 @@ async function makeScannableQrDataUrl(text, size = 256, quietZone = 32) {
   ctx.fillRect(0, 0, out.width, out.height);
   ctx.drawImage(qrImage, quietZone, quietZone, size, size);
   return out.toDataURL("image/png");
+}
+
+function createShiftQrBox(text, size = 84) {
+  const qrBox = document.createElement("div");
+  qrBox.className = "qr-box";
+
+  if (!text) {
+    qrBox.textContent = "No QR";
+    return qrBox;
+  }
+
+  new QRCode(qrBox, {
+    text,
+    width: size,
+    height: size,
+    colorDark: "#000000",
+    colorLight: "#ffffff",
+    correctLevel: QRCode.CorrectLevel.H
+  });
+
+  return qrBox;
+}
+
+function renderShiftTabs() {
+  const tabs = document.getElementById("shiftTabs");
+  if (!tabs) return;
+
+  tabs.innerHTML = "";
+
+  instructorShiftTabs.forEach(shift => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `shift-tab${shift.id === activeShiftId ? " active" : ""}`;
+    button.textContent = `${shift.label} (${shift.members.length})`;
+    button.addEventListener("click", () => {
+      activeShiftId = shift.id;
+      renderShiftTabs();
+      renderShiftList();
+    });
+    tabs.appendChild(button);
+  });
+}
+
+function renderShiftList() {
+  const runId = ++shiftRenderRun;
+  const list = document.getElementById("shiftList");
+  if (!list) return;
+
+  const activeShift = instructorShiftTabs.find(shift => shift.id === activeShiftId) || instructorShiftTabs[0];
+  list.innerHTML = "";
+
+  if (!activeShift || !activeShift.members.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty-state";
+    empty.textContent = "No QR codes are loaded for this shift.";
+    list.appendChild(empty);
+    return;
+  }
+
+  activeShift.members.forEach(member => {
+    if (runId !== shiftRenderRun) return;
+
+    const card = document.createElement("article");
+    card.className = "shift-card";
+    card.appendChild(createShiftQrBox(member.codeText));
+
+    const info = document.createElement("div");
+    const name = document.createElement("h3");
+    name.textContent = member.displayName || `${member.firstName} ${member.lastName}`.trim() || "Saved QR";
+
+    const cert = document.createElement("p");
+    cert.textContent = member.certNumber ? `Cert #: ${member.certNumber}` : "Cert #: Not entered";
+
+    const code = document.createElement("p");
+    code.textContent = member.codeText ? `QR Text: ${member.codeText}` : "QR Text: Not entered";
+
+    info.appendChild(name);
+    info.appendChild(cert);
+    info.appendChild(code);
+    card.appendChild(info);
+    list.appendChild(card);
+  });
+}
+
+async function loadInstructorShiftTabs() {
+  const status = document.getElementById("shiftStatus");
+  if (status) status.textContent = "Loading shift QR codes...";
+
+  try {
+    const data = await apiGet({ action: "getShiftQRCodes", t: Date.now() });
+
+    if (data && data.ok && Array.isArray(data.shifts)) {
+      instructorShiftTabs = normalizeShiftData(data.shifts);
+      if (status) status.textContent = "Shift QR codes loaded.";
+    } else {
+      instructorShiftTabs = JSON.parse(JSON.stringify(DEFAULT_SHIFT_TABS));
+      if (status) status.textContent = "No shift QR codes are available yet.";
+    }
+  } catch (err) {
+    instructorShiftTabs = JSON.parse(JSON.stringify(DEFAULT_SHIFT_TABS));
+    if (status) status.textContent = "Unable to load shift QR codes.";
+  }
+
+  renderShiftTabs();
+  renderShiftList();
 }
 
 async function renderRecordQrCodes() {
@@ -336,6 +597,7 @@ async function loginInstructor() {
     msg.textContent = "Login successful.";
     document.getElementById("loginBox").classList.add("hidden");
     document.getElementById("recordsBox").classList.remove("hidden");
+    loadInstructorShiftTabs();
     refreshData();
   } catch (err) {
     msg.className = "status error";
@@ -476,6 +738,9 @@ function logout() {
   document.getElementById("instPass").value = "";
   document.getElementById("loginMsg").textContent = "";
   document.getElementById("records").innerHTML = "<p>Loading student records...</p>";
+  document.getElementById("shiftTabs").innerHTML = "";
+  document.getElementById("shiftList").innerHTML = "";
+  document.getElementById("shiftStatus").textContent = "Loading shift QR codes...";
 }
 
 function escapeHtml(str) {
