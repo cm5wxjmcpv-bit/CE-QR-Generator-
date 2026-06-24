@@ -59,6 +59,7 @@
     min-height: 18px;
     color: #9cffb7;
   }
+
 </style>
 </head>
 <body class="admin-body">
@@ -155,7 +156,7 @@
 
         <div class="panel">
           <h2>All CE Records</h2>
-          <p class="helper-text">Use Add to Shift List to place a record into A Shift, B Shift, C Shift, Admin, or Transport without typing it again.</p>
+          <p class="helper-text">Use Add to Shift List to place providers into A Shift, B Shift, C Shift, Admin, or Transport. Providers can also remain unassigned.</p>
           <div id="records"><p>Loading records...</p></div>
         </div>
       </div>
@@ -480,13 +481,14 @@ async function loadRecords() {
 
       grouped[day].forEach(r => {
         const entry = document.createElement("div");
-        entry.className = "entry";
+        const rowNumber = Number(r.row);
         const shiftRecord = encodeURIComponent(JSON.stringify({
           studentFirst: r.studentFirst || "",
           studentLast: r.studentLast || "",
           certNumber: r.certNumber || "",
           codeText: r.codeText || ""
         }));
+        entry.className = "entry";
         entry.innerHTML = `
           <div class="entry-main">
             <p><strong>${escapeHtml(r.studentFirst || "")} ${escapeHtml(r.studentLast || "")}</strong></p>
@@ -500,24 +502,18 @@ async function loadRecords() {
               ${r.image ? `<img src="${escapeHtml(r.image)}" alt="QR" />` : "QR"}
             </div>
             <div class="shift-record-actions">
-              <label for="shiftSelect-${Number(r.row)}">Add this person to shift list</label>
-              <select id="shiftSelect-${Number(r.row)}" class="shift-select">
+              <label for="shiftSelect-${rowNumber}">Add this provider to shift list</label>
+              <select id="shiftSelect-${rowNumber}" class="shift-select">
                 <option value="a-shift">A Shift</option>
                 <option value="b-shift">B Shift</option>
                 <option value="c-shift">C Shift</option>
                 <option value="admin">Admin</option>
                 <option value="transport">Transport</option>
               </select>
-              <button class="small-btn" onclick="
-                addCeRecordToShift(
-                  JSON.parse(decodeURIComponent('${shiftRecord}')),
-                  document.getElementById('shiftSelect-${Number(r.row)}').value,
-                  document.getElementById('shiftStatus-${Number(r.row)}')
-                ).catch(err => document.getElementById('shiftStatus-${Number(r.row)}').textContent = err.message || 'Unable to add.')
-              ">Add to Shift List</button>
-              <div id="shiftStatus-${Number(r.row)}" class="shift-status-line"></div>
+              <button class="small-btn" onclick="addCeRecordToShift(JSON.parse(decodeURIComponent('${shiftRecord}')), document.getElementById('shiftSelect-${rowNumber}').value, document.getElementById('shiftStatus-${rowNumber}')).catch(err => document.getElementById('shiftStatus-${rowNumber}').textContent = err.message || 'Unable to add.')">Add to Shift List</button>
+              <div id="shiftStatus-${rowNumber}" class="shift-status-line"></div>
             </div>
-            <button class="small-btn danger-btn" onclick="deleteRow(${Number(r.row)})">Delete Row ${Number(r.row)}</button>
+            <button class="small-btn danger-btn" onclick="deleteRow(${rowNumber})">Delete Row ${rowNumber}</button>
           </div>
         `;
         list.appendChild(entry);
