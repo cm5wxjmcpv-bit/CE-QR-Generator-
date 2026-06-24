@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="style.css" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="shift-record-helper.js"></script>
 
 <style>
   .entry-side img {
@@ -31,6 +32,32 @@
     color: #111111;
     border-radius: 6px;
     margin-bottom: 8px;
+  }
+
+  .shift-record-actions {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255,255,255,0.16);
+    display: grid;
+    gap: 8px;
+  }
+
+  .shift-record-actions label {
+    font-size: 0.85rem;
+    color: #f2d8d8;
+  }
+
+  .shift-select {
+    width: 100%;
+    padding: 8px;
+    border-radius: 6px;
+    border: none;
+  }
+
+  .shift-status-line {
+    font-size: 0.85rem;
+    min-height: 18px;
+    color: #9cffb7;
   }
 </style>
 </head>
@@ -64,6 +91,7 @@
           <div class="button-row">
             <button onclick="loadUsers()">Refresh Users</button>
             <button onclick="loadRecords()">Refresh Records</button>
+            <button onclick="openShiftAdmin()">Open Shift QR Editor</button>
             <button onclick="exportPDF()">Export All to PDF</button>
             <button onclick="logout()">Logout</button>
           </div>
@@ -127,7 +155,7 @@
 
         <div class="panel">
           <h2>All CE Records</h2>
-          <p class="helper-text">Admin token is required for full-record access and delete actions.</p>
+          <p class="helper-text">Use Add to Shift List to place a record into A Shift, B Shift, C Shift, Admin, or Transport without typing it again.</p>
           <div id="records"><p>Loading records...</p></div>
         </div>
       </div>
@@ -453,6 +481,12 @@ async function loadRecords() {
       grouped[day].forEach(r => {
         const entry = document.createElement("div");
         entry.className = "entry";
+        const shiftRecord = encodeURIComponent(JSON.stringify({
+          studentFirst: r.studentFirst || "",
+          studentLast: r.studentLast || "",
+          certNumber: r.certNumber || "",
+          codeText: r.codeText || ""
+        }));
         entry.innerHTML = `
           <div class="entry-main">
             <p><strong>${escapeHtml(r.studentFirst || "")} ${escapeHtml(r.studentLast || "")}</strong></p>
@@ -464,6 +498,24 @@ async function loadRecords() {
           <div class="entry-side">
             <div class="qr-slot" data-code="${escapeHtml(r.codeText || "")}" data-image="${escapeHtml(r.image || "")}">
               ${r.image ? `<img src="${escapeHtml(r.image)}" alt="QR" />` : "QR"}
+            </div>
+            <div class="shift-record-actions">
+              <label for="shiftSelect-${Number(r.row)}">Add this person to shift list</label>
+              <select id="shiftSelect-${Number(r.row)}" class="shift-select">
+                <option value="a-shift">A Shift</option>
+                <option value="b-shift">B Shift</option>
+                <option value="c-shift">C Shift</option>
+                <option value="admin">Admin</option>
+                <option value="transport">Transport</option>
+              </select>
+              <button class="small-btn" onclick="
+                addCeRecordToShift(
+                  JSON.parse(decodeURIComponent('${shiftRecord}')),
+                  document.getElementById('shiftSelect-${Number(r.row)}').value,
+                  document.getElementById('shiftStatus-${Number(r.row)}')
+                ).catch(err => document.getElementById('shiftStatus-${Number(r.row)}').textContent = err.message || 'Unable to add.')
+              ">Add to Shift List</button>
+              <div id="shiftStatus-${Number(r.row)}" class="shift-status-line"></div>
             </div>
             <button class="small-btn danger-btn" onclick="deleteRow(${Number(r.row)})">Delete Row ${Number(r.row)}</button>
           </div>
