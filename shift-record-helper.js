@@ -87,8 +87,21 @@ async function addCeRecordToShift(record, shiftId, statusElement) {
   const target = shifts.find(shift => shift.id === shiftId);
   if (!target) throw new Error("Invalid shift selected.");
 
-  const exists = target.members.some(existing => ceShiftUpper(existing.codeText) === member.codeText);
-  if (exists) {
+  let alreadyInTarget = false;
+  shifts.forEach(shift => {
+    const keptMembers = [];
+    shift.members.forEach(existing => {
+      const sameProvider = ceShiftUpper(existing.codeText) === member.codeText;
+      if (sameProvider && shift.id === target.id) {
+        alreadyInTarget = true;
+      }
+      if (!sameProvider) keptMembers.push(existing);
+    });
+    shift.members = keptMembers;
+  });
+
+  if (alreadyInTarget) {
+    target.members.push(member);
     if (status) status.textContent = `Already in ${target.label}.`;
     return;
   }
