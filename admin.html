@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CE QR Shift Admin</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#0b1c2c;color:#fff}header{background:#071321;border-bottom:3px solid #b22222;padding:18px 22px}h1{color:#ff4c4c;margin:0 0 6px}.status{color:#ffd0d0;font-weight:bold}.shell{display:grid;grid-template-columns:280px 1fr;min-height:calc(100vh - 92px)}.side{background:#071321;border-right:1px solid #24415f;padding:18px}.content{padding:22px}.card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:12px;padding:16px;margin-bottom:16px}button{border:0;border-radius:8px;background:#b22222;color:#fff;padding:10px 14px;cursor:pointer;font-weight:bold}button:hover{background:#ff4c4c}.secondary{background:#26394f}.danger{background:#7d1717}input{width:100%;border:1px solid #40566f;border-radius:8px;padding:10px;background:#102a43;color:#fff}label{display:block;font-weight:bold;margin-bottom:6px;color:#ffd0d0}.tab-button{width:100%;text-align:left;margin-bottom:8px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12)}.tab-button.active{background:#b22222;border-color:#ff4c4c}.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}.member-row{display:grid;grid-template-columns:84px 1fr 1fr 1fr 1.5fr auto;gap:10px;align-items:end;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:12px;margin-bottom:12px}.qr-preview{width:72px;height:72px;background:#fff;border-radius:8px;padding:6px;display:flex;align-items:center;justify-content:center;color:#111;font-size:12px;text-align:center}@media(max-width:900px){.shell{grid-template-columns:1fr}.side{border-right:0;border-bottom:1px solid #24415f}.member-row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header><h1>CE QR Shift Admin</h1><div class="status" id="status">Load, edit, then save the shift QR tabs.</div></header>
+<main class="shell">
+  <aside class="side">
+    <div class="card">
+      <label for="adminCode">Admin Code</label>
+      <input id="adminCode" placeholder="Required to save">
+    </div>
+    <h2>Tabs</h2>
+    <div id="shiftButtons"></div>
+  </aside>
+  <section class="content">
+    <div class="toolbar">
+      <button type="button" id="addBtn">Add QR</button>
+      <button type="button" id="saveBtn">Save All Tabs</button>
+      <button type="button" class="secondary" id="reloadBtn">Reload</button>
+    </div>
+    <section class="card">
+      <h2 id="activeTitle">A Shift</h2>
+      <p>First, last, and cert number build QR text as <strong>CERTLAST|FIRST</strong>. Use QR Text only when you need to override it.</p>
+      <div id="rows"></div>
+    </section>
+  </section>
+</main>
+<script>
+const SHEET_URL="https://script.google.com/macros/s/AKfycbwrPPMMgt0d1YsHP9nud7nL7uEUCtvB7Wu-qjvlmBaUN7lW5geubzQcx_tGbOn_Ih7h/exec";
+const SHIFT_GROUPS=[{id:"a-shift",label:"A Shift"},{id:"b-shift",label:"B Shift"},{id:"c-shift",label:"C Shift"},{id:"admin",label:"Admin"},{id:"transport",label:"Transport"}];
+const DEFAULT_SHIFT_TABS=SHIFT_GROUPS.map(s=>({...s,members:[]}));
+let shiftTabs=JSON.parse(JSON.stringify(DEFAULT_SHIFT_TABS));let activeShiftId="a-shift";
+const statusEl=document.getElementById("status");
+function setStatus(m){statusEl.textContent=m}function clean(v){return String(v||"").trim()}function upper(v){return clean(v).toUpperCase()}function getCodeText(f,l,c){return `${c}${l}|${f}`}function escapeHtml(v){return String(v||"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;")}
+async function apiGet(params={}){const url=`${SHEET_URL}?${new URLSearchParams(params).toString()}`;const res=await fetch(url,{method:"GET",cache:"no-store"});return JSON.parse(await res.text())}
+async function apiPost(payload={}){const res=await fetch(SHEET_URL,{method:"POST",body:JSON.stringify(payload)});return JSON.parse(await res.text())}
+function normalizeShiftData(incoming){const byId=new Map();(Array.isArray(incoming)?incoming:[]).forEach(s=>byId.set(clean(s.id||s.shiftId).toLowerCase(),Array.isArray(s.members)?s.members:[]));return SHIFT_GROUPS.map(g=>({...g,members:(byId.get(g.id)||[]).map(m=>{const firstName=upper(m.firstName||m.first);const lastName=upper(m.lastName||m.last);const certNumber=upper(m.certNumber||m.cert);const displayName=clean(m.displayName||m.name||`${firstName} ${lastName}`);const codeText=upper(m.codeText||(firstName&&lastName&&certNumber?getCodeText(firstName,lastName,certNumber):""));return{firstName,lastName,certNumber,displayName,codeText}}).filter(m=>m.displayName||m.codeText)}))}
+function currentShift(){return shiftTabs.find(s=>s.id===activeShiftId)||shiftTabs[0]}
+function renderButtons(){const wrap=document.getElementById("shiftButtons");wrap.innerHTML="";shiftTabs.forEach(s=>{const b=document.createElement("button");b.type="button";b.className=`tab-button${s.id===activeShiftId?" active":""}`;b.textContent=`${s.label} (${s.members.length})`;b.onclick=()=>{syncRows();activeShiftId=s.id;renderAll()};wrap.appendChild(b)})}
+function renderQr(box,text){box.innerHTML="";if(!text){box.textContent="No QR";return}new QRCode(box,{text,width:60,height:60,colorDark:"#000",colorLight:"#fff",correctLevel:QRCode.CorrectLevel.H})}
+function makeRow(m={}){const row=document.createElement("div");row.className="member-row";row.innerHTML=`<div class="qr-preview"></div><div><label>First</label><input data-field="firstName" value="${escapeHtml(m.firstName)}"></div><div><label>Last</label><input data-field="lastName" value="${escapeHtml(m.lastName)}"></div><div><label>Cert #</label><input data-field="certNumber" value="${escapeHtml(m.certNumber)}"></div><div><label>QR Text</label><input data-field="codeText" value="${escapeHtml(m.codeText)}" placeholder="Auto: CERTLAST|FIRST"><input data-field="displayName" value="${escapeHtml(m.displayName)}" placeholder="Display name" style="margin-top:6px"></div><button type="button" class="danger">Delete</button>`;const update=()=>{const f=upper(row.querySelector('[data-field="firstName"]').value);const l=upper(row.querySelector('[data-field="lastName"]').value);const c=upper(row.querySelector('[data-field="certNumber"]').value);const manual=upper(row.querySelector('[data-field="codeText"]').value);renderQr(row.querySelector(".qr-preview"),manual||(f&&l&&c?getCodeText(f,l,c):""))};row.querySelectorAll("input").forEach(i=>i.addEventListener("input",update));row.querySelector("button").onclick=()=>{row.remove();syncRows();renderButtons()};update();return row}
+function renderRows(){const s=currentShift();document.getElementById("activeTitle").textContent=s.label;const rows=document.getElementById("rows");rows.innerHTML="";if(!s.members.length){rows.innerHTML="<p>No QR codes in this tab yet. Click Add QR to add one.</p>";return}s.members.forEach(m=>rows.appendChild(makeRow(m)))}
+function syncRows(){const s=currentShift();s.members=Array.from(document.querySelectorAll(".member-row")).map(row=>{const firstName=upper(row.querySelector('[data-field="firstName"]').value);const lastName=upper(row.querySelector('[data-field="lastName"]').value);const certNumber=upper(row.querySelector('[data-field="certNumber"]').value);const displayName=clean(row.querySelector('[data-field="displayName"]').value)||`${firstName} ${lastName}`.trim();const manual=upper(row.querySelector('[data-field="codeText"]').value);const codeText=manual||(firstName&&lastName&&certNumber?getCodeText(firstName,lastName,certNumber):"");return{firstName,lastName,certNumber,displayName,codeText}}).filter(m=>m.displayName||m.codeText||m.certNumber)}
+function renderAll(){renderButtons();renderRows()}
+async function loadData(){setStatus("Loading shift QR tabs...");try{const data=await apiGet({action:"getShiftQRCodes",t:Date.now()});shiftTabs=data&&data.ok&&Array.isArray(data.shifts)?normalizeShiftData(data.shifts):JSON.parse(JSON.stringify(DEFAULT_SHIFT_TABS));setStatus("Loaded.")}catch(e){shiftTabs=JSON.parse(JSON.stringify(DEFAULT_SHIFT_TABS));setStatus("Backend shift storage is not set up yet.")}renderAll()}
+async function saveData(){syncRows();const adminCode=clean(document.getElementById("adminCode").value);if(!adminCode){setStatus("Enter the admin code before saving.");return}setStatus("Saving...");try{const data=await apiPost({action:"saveShiftQRCodes",adminCode,shifts:shiftTabs});if(!(data&&(data.ok||data.success)))throw new Error(data.error||"Save failed");setStatus("Saved. Refresh the public page to see the updated tabs.");renderAll()}catch(e){setStatus(e.message||"Save failed")}}
+document.getElementById("addBtn").onclick=()=>{syncRows();currentShift().members.push({firstName:"",lastName:"",certNumber:"",displayName:"",codeText:""});renderAll()};document.getElementById("saveBtn").onclick=saveData;document.getElementById("reloadBtn").onclick=loadData;loadData();
+</script>
+</body>
+</html>
