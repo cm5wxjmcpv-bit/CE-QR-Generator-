@@ -23,13 +23,19 @@ function ceShiftUpper(value) {
 }
 
 function ceShiftToken() {
+  if (typeof ADMIN_TOKEN !== "undefined" && ADMIN_TOKEN) {
+    return ADMIN_TOKEN;
+  }
+
   const key = "ceShiftAdminCode";
   let token = sessionStorage.getItem(key) || "";
+
   if (!token) {
     token = prompt("Enter the admin code:") || "";
     token = token.trim();
     if (token) sessionStorage.setItem(key, token);
   }
+
   return token;
 }
 
@@ -41,7 +47,12 @@ function ceShiftMemberFromRecord(record) {
   const firstName = ceShiftUpper(record.studentFirst);
   const lastName = ceShiftUpper(record.studentLast);
   const certNumber = ceShiftUpper(record.certNumber);
-  const codeText = ceShiftUpper(record.codeText) || (firstName && lastName && certNumber ? `${certNumber}${lastName}|${firstName}` : "");
+  const codeText =
+    ceShiftUpper(record.codeText) ||
+    (firstName && lastName && certNumber
+      ? `${certNumber}${lastName}|${firstName}`
+      : "");
+
   return {
     firstName,
     lastName,
@@ -53,20 +64,39 @@ function ceShiftMemberFromRecord(record) {
 
 function ceShiftNormalizeTabs(incoming) {
   const byId = new Map();
+
   (Array.isArray(incoming) ? incoming : []).forEach(shift => {
-    byId.set(ceShiftClean(shift.id || shift.shiftId).toLowerCase(), Array.isArray(shift.members) ? shift.members : []);
+    byId.set(
+      ceShiftClean(shift.id || shift.shiftId).toLowerCase(),
+      Array.isArray(shift.members) ? shift.members : []
+    );
   });
 
   return CE_SHIFT_GROUPS.map(group => ({
     ...group,
-    members: (byId.get(group.id) || []).map(member => {
-      const firstName = ceShiftUpper(member.firstName || member.first);
-      const lastName = ceShiftUpper(member.lastName || member.last);
-      const certNumber = ceShiftUpper(member.certNumber || member.cert);
-      const displayName = ceShiftClean(member.displayName || member.name || `${firstName} ${lastName}`);
-      const codeText = ceShiftUpper(member.codeText || (firstName && lastName && certNumber ? `${certNumber}${lastName}|${firstName}` : ""));
-      return { firstName, lastName, certNumber, displayName, codeText };
-    }).filter(member => member.displayName || member.codeText)
+    members: (byId.get(group.id) || [])
+      .map(member => {
+        const firstName = ceShiftUpper(member.firstName || member.first);
+        const lastName = ceShiftUpper(member.lastName || member.last);
+        const certNumber = ceShiftUpper(member.certNumber || member.cert);
+        const displayName = ceShiftClean(
+          member.displayName || member.name || `${firstName} ${lastName}`
+        );
+        const codeText =
+          ceShiftUpper(member.codeText) ||
+          (firstName && lastName && certNumber
+            ? `${certNumber}${lastName}|${firstName}`
+            : "");
+
+        return {
+          firstName,
+          lastName,
+          certNumber,
+          displayName,
+          codeText
+        };
+      })
+      .filter(member => member.displayName || member.codeText)
   }));
 }
 
@@ -75,38 +105,53 @@ async function addCeRecordToShift(record, shiftId, statusElement) {
   const status = statusElement || null;
 
   if (status) status.textContent = "Adding...";
+
   if (!member.codeText) {
     if (status) status.textContent = "Missing QR text.";
     return;
   }
 
-  const current = await apiGet({ action: "getShiftQRCodes", t: Date.now() });
-  if (!current.ok) throw new Error(current.error || "Unable to load shift list.");
+  const current = await apiGet({
+    action: "getShiftQRCodes",
+    t: Date.now()
+  });
+
+  if (!current.ok) {
+    throw new Error(current.error || "Unable to load shift list.");
+  }
 
   const shifts = ceShiftNormalizeTabs(current.shifts);
   const target = shifts.find(shift => shift.id === shiftId);
-  if (!target) throw new Error("Invalid shift selected.");
+
+  if (!target) {
+    throw new Error("Invalid shift selected.");
+  }
 
   let alreadyInTarget = false;
+
   shifts.forEach(shift => {
     const keptMembers = [];
+
     shift.members.forEach(existing => {
-      const sameProvider = ceShiftUpper(existing.codeText) === member.codeText;
+      const sameProvider =
+        ceShiftUpper(existing.codeText) === member.codeText;
+
       if (sameProvider && shift.id === target.id) {
         alreadyInTarget = true;
       }
-      if (!sameProvider) keptMembers.push(existing);
+
+      if (!sameProvider) {
+        keptMembers.push(existing);
+      }
     });
+
     shift.members = keptMembers;
   });
 
-  if (alreadyInTarget) {
+  if (!alreadyInTarget) {
     target.members.push(member);
-    if (status) status.textContent = `Already in ${target.label}.`;
-    return;
   }
 
-  target.members.push(member);
   const saved = await apiPost({
     action: "saveShiftQRCodes",
     adminCode: ceShiftToken(),
@@ -117,5 +162,9 @@ async function addCeRecordToShift(record, shiftId, statusElement) {
     throw new Error(saved.error || "Unable to save shift list.");
   }
 
-  if (status) status.textContent = `Added to ${target.label}.`;
+  if (status) {
+    status.textContent = alreadyInTarget
+      ? `Already in ${target.label}.`
+      : `Added to ${target.label}.`;
+  }
 }
