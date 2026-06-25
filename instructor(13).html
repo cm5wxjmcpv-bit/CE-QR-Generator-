@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Instructor Dashboard | Martinsville Fire & EMS CE Portal</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Open Sans', sans-serif;
+    background: url('ABE9E472-6FA5-46E6-866D-992B713B5B5B.JPG') no-repeat center center fixed;
+    background-size: cover;
+    color: white;
+    min-height: 100vh;
+  }
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+    z-index: 1;
+  }
+  .container {
+    position: relative;
+    z-index: 2;
+    background: rgba(11, 28, 44, 0.92);
+    margin: 30px auto;
+    padding: 28px;
+    border-radius: 12px;
+    max-width: 1150px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+    animation: fadeIn 1s ease;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  h1, h2 {
+    text-align: center;
+    color: #ff4c4c;
+    font-family: 'Oswald', sans-serif;
+    margin: 0 0 10px;
+  }
+  .subtitle {
+    text-align: center;
+    color: #f3d5d5;
+    margin-bottom: 20px;
+  }
+  .login-box, .records-box {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 20px;
+    margin-top: 18px;
+  }
+  .login-box {
+    max-width: 760px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .instructor-shell {
+    display: grid;
+    grid-template-columns: minmax(260px, 340px) 1fr;
+    gap: 18px;
+    align-items: start;
+  }
+  .shift-panel, .records-panel {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 16px;
+  }
+  .shift-panel h2 {
+    text-align: left;
+  }
+  .shift-help {
+    color: #f3d5d5;
+    font-size: 0.92rem;
+    margin: 0 0 12px;
+  }
+  .shift-tabs {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+    margin: 12px 0;
+  }
+  .shift-tab {
+    width: 100%;
+    text-align: left;
+    margin: 0;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.12);
+  }
+  .shift-tab.active {
+    background: #b22222;
+    border-color: #ff4c4c;
+    transform: none;
+  }
+  .shift-status, .empty-state {
+    color: #f0dede;
+    border: 1px dashed rgba(255,255,255,0.22);
+    border-radius: 10px;
+    padding: 10px;
+    background: rgba(255,255,255,0.05);
+    font-size: 0.9rem;
+  }
+  .shift-status {
+    margin-top: 10px;
+  }
+  .shift-list {
+    margin-top: 12px;
+    display: grid;
+    gap: 12px;
+  }
+  .shift-card {
+    display: grid;
+    grid-template-columns: 128px minmax(0, 1fr);
+    gap: 18px;
+    align-items: center;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 12px;
+    padding: 10px;
+  }
+  .shift-card .qr-box {
+    background: #ffffff;
+    border-radius: 8px;
+    padding: 8px;
+    width: 100px;
+    min-height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #111111;
+  }
+  .shift-card h3 {
+    margin: 0 0 4px;
+    color: #ffffff;
+    font-size: 1rem;
+  }
+  .shift-card p {
+    margin: 3px 0;
+    color: #f0dede;
+    font-size: 0.88rem;
+    word-break: break-word;
+  }
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+  label {
+    display: block;
+    font-size: 0.9rem;
+    margin-bottom: 6px;
+    color: #f2d8d8;
+  }
+  input {
+    width: 100%;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 10px 12px;
+    font-size: 16px;
+    border-radius: 6px;
+    border: none;
+  }
+  button {
+    background: #b22222;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 16px;
+    margin: 5px;
+    font-size: 15px;
+    cursor: pointer;
+    transition: 0.3s;
+  }
+  button:hover {
+    background: #ff4c4c;
+    transform: scale(1.03);
+  }
+  .student-qr-button {
+    background: #8b0000;
+    border: 1px solid rgba(255,255,255,0.22);
+    font-weight: 700;
+  }
+  .controls {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  .status {
+    text-align: center;
+    min-height: 22px;
+    font-weight: 700;
+    margin-top: 12px;
+  }
+  .error { color: #ff8080; }
+  .success { color: #9cffb7; }
+  .record {
+    border-bottom: 1px solid #ff4c4c;
+    padding: 12px 0;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .record img {
+    width: 140px;
+    height: 140px;
+    object-fit: contain;
+    background: #ffffff;
+    padding: 8px;
+    border-radius: 6px;
+    box-shadow: none;
+  }
+  .qr-slot {
+    width: 156px;
+    min-height: 156px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #ffffff;
+    border-radius: 6px;
+  }
+  .record-info {
+    flex: 1;
+    min-width: 220px;
+  }
+  .record-info strong { color: #ff4c4c; }
+  .code-line {
+    font-size: 0.9rem;
+    opacity: 0.92;
+    word-break: break-all;
+  }
+  .hidden { display: none; }
+  footer {
+    text-align: center;
+    color: #ff4c4c;
+    margin-top: 20px;
+    font-size: 0.8em;
+  }
+  @media (max-width: 900px) {
+    .instructor-shell { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 700px) {
+    .container { margin: 16px; padding: 18px; }
+    .form-grid { grid-template-columns: 1fr; }
+    button { width: 100%; margin: 6px 0; }
+    .shift-card { grid-template-columns: 1fr; text-align: center; }
+    .shift-card .qr-box { margin: 0 auto; }
+  }
+</style>
+</head>
+<body>
+  <div class="overlay"></div>
+
+  <div class="container">
+    <h1>Instructor Dashboard</h1>
+    <p class="subtitle">Instructor login required to view your student records</p>
+
+    <div id="loginBox" class="login-box">
+      <h2>Instructor Login</h2>
+      <div class="form-grid">
+        <div>
+          <label for="instUser">Username</label>
+          <input id="instUser" type="text" autocomplete="username" placeholder="Instructor username" />
+        </div>
+        <div>
+          <label for="instPass">Password</label>
+          <input id="instPass" type="password" autocomplete="current-password" placeholder="Instructor password" />
+        </div>
+      </div>
+      <div class="controls">
+        <button onclick="loginInstructor()">Login</button>
+      </div>
+      <div id="loginMsg" class="status"></div>
+    </div>
+
+    <div id="recordsBox" class="records-box hidden">
+      <div class="instructor-shell">
+        <aside class="shift-panel" aria-label="Read only shift QR codes">
+          <h2>Shift QR Codes</h2>
+          <p class="shift-help">Read-only shift list. Select a shift to open the QR codes for scanning.</p>
+          <div id="shiftTabs" class="shift-tabs"></div>
+          <div id="shiftStatus" class="shift-status">Loading shift QR codes...</div>
+          <div id="shiftList" class="shift-list"></div>
+        </aside>
+
+        <section class="records-panel">
+          <div class="controls">
+            <button class="student-qr-button" onclick="openClassQrPage()">📱 Show Student Sign-In QR</button>
+            <button onclick="refreshData(); loadInstructorShiftTabs();">🔄 Refresh</button>
+            <button onclick="exportPDF()">📄 Export PDF</button>
+            <button onclick="logout()">🚪 Logout</button>
+          </div>
+          <div id="records"><p>Loading student records...</p></div>
+        </section>
+      </div>
+    </div>
+
+    <footer>© 2025 Martinsville Fire & EMS • CE Instructor Portal</footer>
+  </div>
+
+<script>
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyQMrRpj21lEC3hJnmDWWHPKlmBX9N13Lfto_rC8m_BNzH4DM1W8_JwylsRRIUy-xBA/exec";
+
+const SHIFT_GROUPS = [
+  { id: "a-shift", label: "A Shift" },
+  { id: "b-shift", label: "B Shift" },
+  { id: "c-shift", label: "C Shift" },
+  { id: "admin", label: "Admin" },
+  { id: "transport", label: "Transport" }
+];
+
+const DEFAULT_SHIFT_TABS = SHIFT_GROUPS.map(shift => ({ ...shift, members: [] }));
+let instructorShiftTabs = JSON.parse(JSON.stringify(DEFAULT_SHIFT_TABS));
+let activeShiftId = "a-shift";
+let shiftRenderRun = 0;
+
+function qs(params) {
+  return new URLSearchParams(params).toString();
+}
+
+async function apiGet(params) {
+  const res = await fetch(`${SCRIPT_URL}?${qs(params)}`, { method: "GET", cache: "no-store" });
+  const text = await res.text();
+  return JSON.parse(text);
+}
+
+function wait(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function loadImage(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
+function normalizeText(value) {
+  return String(value || "").trim();
+}
+
+function getCodeText(first, last, cert) {
+  return `${cert}${last}|${first}`;
+}
+
+function normalizeShiftData(incoming) {
+  const byId = new Map();
+  const rawShifts = Array.isArray(incoming) ? incoming : [];
+
+  rawShifts.forEach(shift => {
+    if (!shift) return;
+    const id = normalizeText(shift.id || shift.shiftId).toLowerCase();
+    const members = Array.isArray(shift.members) ? shift.members : [];
+    byId.set(id, members);
+  });
+
+  return SHIFT_GROUPS.map(group => {
+    const members = (byId.get(group.id) || [])
+      .map(member => {
+        const firstName = normalizeText(member.firstName || member.first || member.FirstName).toUpperCase();
+        const lastName = normalizeText(member.lastName || member.last || member.LastName).toUpperCase();
+        const certNumber = normalizeText(member.certNumber || member.cert || member.CertNumber).toUpperCase();
+        const displayName = normalizeText(member.displayName || member.name || `${firstName} ${lastName}`).trim();
+        const codeText = normalizeText(member.codeText || member.CodeText || (firstName && lastName && certNumber ? getCodeText(firstName, lastName, certNumber) : "")).toUpperCase();
+        return { firstName, lastName, certNumber, displayName, codeText };
+      })
+      .filter(member => member.displayName || member.codeText);
+
+    return { ...group, members };
+  });
+}
+
+async function makeScannableQrDataUrl(text, size = 256, quietZone = 32) {
+  if (!text) return "";
+
+  const holder = document.createElement("div");
+  holder.style.position = "fixed";
+  holder.style.left = "-9999px";
+  holder.style.top = "-9999px";
+  holder.style.background = "#ffffff";
+  document.body.appendChild(holder);
+
+  new QRCode(holder, {
+    text,
+    width: size,
+    height: size,
+    colorDark: "#000000",
+    colorLight: "#ffffff",
+    correctLevel: QRCode.CorrectLevel.H
+  });
+
+  await wait(300);
+
+  const imgEl = holder.querySelector("img");
+  const canvasEl = holder.querySelector("canvas");
+  const sourceData = imgEl ? imgEl.src : (canvasEl ? canvasEl.toDataURL("image/png") : "");
+  holder.remove();
+
+  if (!sourceData) return "";
+
+  const qrImage = await loadImage(sourceData);
+  const out = document.createElement("canvas");
+  out.width = size + quietZone * 2;
+  out.height = size + quietZone * 2;
+  const ctx = out.getContext("2d");
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, out.width, out.height);
+  ctx.drawImage(qrImage, quietZone, quietZone, size, size);
+  return out.toDataURL("image/png");
+}
+
+function createShiftQrBox(text, size = 84) {
+  const qrBox = document.createElement("div");
+  qrBox.className = "qr-box";
+
+  if (!text) {
+    qrBox.textContent = "No QR";
+    return qrBox;
+  }
+
+  new QRCode(qrBox, {
+    text,
+    width: size,
+    height: size,
+    colorDark: "#000000",
+    colorLight: "#ffffff",
+    correctLevel: QRCode.CorrectLevel.H
+  });
+
+  return qrBox;
+}
+
+function openClassQrPage() {
+  const session = getSession();
+
+  if (!session || !session.username) {
+    alert("Please log in again.");
+    return;
+  }
+
+  const instructorSlug = normalizeText(session.instructorSlug || session.username);
+  const qrPageUrl = new URL("class-qr.html", window.location.href);
+
+  if (instructorSlug) {
+    qrPageUrl.searchParams.set("instructor", instructorSlug);
+  }
+
+  window.open(qrPageUrl.toString(), "_blank", "noopener");
+}
+
+function renderShiftTabs() {
+  const tabs = document.getElementById("shiftTabs");
+  if (!tabs) return;
+
+  tabs.innerHTML = "";
+
+  instructorShiftTabs.forEach(shift => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `shift-tab${shift.id === activeShiftId ? " active" : ""}`;
+    button.textContent = `${shift.label} (${shift.members.length})`;
+    button.addEventListener("click", () => {
+      activeShiftId = shift.id;
+      renderShiftTabs();
+      renderShiftList();
+    });
+    tabs.appendChild(button);
+  });
+}
+
+function renderShiftList() {
+  const runId = ++shiftRenderRun;
+  const list = document.getElementById("shiftList");
+  if (!list) return;
+
+  const activeShift = instructorShiftTabs.find(shift => shift.id === activeShiftId) || instructorShiftTabs[0];
+  list.innerHTML = "";
+
+  if (!activeShift || !activeShift.members.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty-state";
+    empty.textContent = "No QR codes are loaded for this shift.";
+    list.appendChild(empty);
+    return;
+  }
+
+  activeShift.members.forEach(member => {
+    if (runId !== shiftRenderRun) return;
+
+    const card = document.createElement("article");
+    card.className = "shift-card";
+    card.appendChild(createShiftQrBox(member.codeText));
+
+    const info = document.createElement("div");
+    const name = document.createElement("h3");
+    name.textContent = member.displayName || `${member.firstName} ${member.lastName}`.trim() || "Saved QR";
+
+    const cert = document.createElement("p");
+    cert.textContent = member.certNumber ? `Cert #: ${member.certNumber}` : "Cert #: Not entered";
+
+    const code = document.createElement("p");
+    code.textContent = member.codeText ? `QR Text: ${member.codeText}` : "QR Text: Not entered";
+
+    info.appendChild(name);
+    info.appendChild(cert);
+    info.appendChild(code);
+    card.appendChild(info);
+    list.appendChild(card);
+  });
+}
+
+async function loadInstructorShiftTabs() {
+  const status = document.getElementById("shiftStatus");
+  if (status) status.textContent = "Loading shift QR codes...";
+
+  try {
+    const data = await apiGet({ action: "getShiftQRCodes", t: Date.now() });
+
+    if (data && data.ok && Array.isArray(data.shifts)) {
+      instructorShiftTabs = normalizeShiftData(data.shifts);
+      if (status) status.textContent = "Shift QR codes loaded.";
+    } else {
+      instructorShiftTabs = JSON.parse(JSON.stringify(DEFAULT_SHIFT_TABS));
+      if (status) status.textContent = "No shift QR codes are available yet.";
+    }
+  } catch (err) {
+    instructorShiftTabs = JSON.parse(JSON.stringify(DEFAULT_SHIFT_TABS));
+    if (status) status.textContent = "Unable to load shift QR codes.";
+  }
+
+  renderShiftTabs();
+  renderShiftList();
+}
+
+async function renderRecordQrCodes() {
+  const slots = Array.from(document.querySelectorAll(".qr-slot[data-code]"));
+  for (const slot of slots) {
+    const codeText = slot.dataset.code || "";
+    const fallbackImage = slot.dataset.image || "";
+    try {
+      const src = await makeScannableQrDataUrl(codeText);
+      if (src) {
+        slot.innerHTML = `<img src="${src}" alt="QR">`;
+      } else if (fallbackImage) {
+        slot.innerHTML = `<img src="${fallbackImage}" alt="QR">`;
+      }
+    } catch (err) {
+      if (fallbackImage) {
+        slot.innerHTML = `<img src="${fallbackImage}" alt="QR">`;
+      }
+    }
+  }
+}
+
+function collectRecordForPdf(recordEl) {
+  const img = recordEl.querySelector(".qr-slot img, img");
+  const info = recordEl.querySelector(".record-info");
+  const lines = info ? info.innerText.split("\n").map(s => s.trim()).filter(Boolean) : [];
+  return { image: img ? img.src : "", lines };
+}
+
+function getSession() {
+  try {
+    return JSON.parse(sessionStorage.getItem("ceInstructorSession") || "null");
+  } catch {
+    return null;
+  }
+}
+
+function setSession(data) {
+  sessionStorage.setItem("ceInstructorSession", JSON.stringify(data));
+}
+
+function clearSession() {
+  sessionStorage.removeItem("ceInstructorSession");
+}
+
+async function loginInstructor() {
+  const username = document.getElementById("instUser").value.trim();
+  const password = document.getElementById("instPass").value.trim();
+  const msg = document.getElementById("loginMsg");
+  msg.className = "status";
+  msg.textContent = "Logging in...";
+
+  if (!username || !password) {
+    msg.className = "status error";
+    msg.textContent = "Enter username and password.";
+    return;
+  }
+
+  try {
+    const data = await apiGet({
+      action: "instructorLogin",
+      username,
+      password
+    });
+
+    if (!data.ok || !data.user) {
+      msg.className = "status error";
+      msg.textContent = data.error || "Invalid instructor login.";
+      return;
+    }
+
+    const user = data.user;
+
+    setSession({
+      username,
+      password,
+      displayName: user.displayName || username,
+      instructorSlug: user.instructorSlug || ""
+    });
+
+    msg.className = "status success";
+    msg.textContent = "Login successful.";
+    document.getElementById("loginBox").classList.add("hidden");
+    document.getElementById("recordsBox").classList.remove("hidden");
+    loadInstructorShiftTabs();
+    refreshData();
+  } catch (err) {
+    msg.className = "status error";
+    msg.textContent = err.message || "Unable to log in.";
+  }
+}
+
+async function refreshData() {
+  const session = getSession();
+  const recordsDiv = document.getElementById("records");
+  recordsDiv.innerHTML = "<p>Loading student records...</p>";
+
+  if (!session || !session.username || !session.password) {
+    recordsDiv.innerHTML = "<p>Please log in again.</p>";
+    return;
+  }
+
+  try {
+    const data = await apiGet({
+      action: "getInstructorRecords",
+      username: session.username,
+      password: session.password
+    });
+
+    if (!data.ok) {
+      recordsDiv.innerHTML = `<p class="error">${data.error || "Unauthorized."}</p>`;
+      return;
+    }
+
+    const records = Array.isArray(data.records) ? data.records : [];
+    if (!records.length) {
+      recordsDiv.innerHTML = "<p>No student submissions found for this instructor.</p>";
+      return;
+    }
+
+    recordsDiv.innerHTML = "";
+    records.forEach(r => {
+      const div = document.createElement("div");
+      div.className = "record";
+      div.innerHTML = `
+        <div class="qr-slot" data-code="${escapeHtml(r.codeText || "")}" data-image="${escapeHtml(r.image || "")}">
+          ${r.image ? `<img src="${escapeHtml(r.image)}" alt="QR">` : "QR"}
+        </div>
+        <div class="record-info">
+          <p><strong>${escapeHtml(r.studentFirst || "")} ${escapeHtml(r.studentLast || "")}</strong> — ${escapeHtml(r.certNumber || "")}</p>
+          <p>${new Date(r.timestamp).toLocaleString()}</p>
+          <p>Instructor: ${escapeHtml(r.instructor || "")}</p>
+          <p class="code-line">${escapeHtml(r.codeText || "")}</p>
+          <button onclick="deleteInstructorRecord(${Number(r.row)})">Delete Record</button>
+        </div>
+      `;
+      recordsDiv.appendChild(div);
+    });
+
+    await renderRecordQrCodes();
+  } catch (err) {
+    recordsDiv.innerHTML = `<p class="error">${err.message || "Error loading records."}</p>`;
+  }
+}
+
+async function deleteInstructorRecord(row) {
+  const session = getSession();
+  if (!session || !session.username || !session.password) {
+    alert("Please log in again.");
+    return;
+  }
+
+  if (!confirm(`Delete record row ${row}?`)) {
+    return;
+  }
+
+  try {
+    const data = await apiGet({
+      action: "deleteInstructorRecord",
+      username: session.username,
+      password: session.password,
+      row: row
+    });
+
+    if (!data.ok) {
+      alert(data.error || "Delete failed.");
+      return;
+    }
+
+    await refreshData();
+  } catch (err) {
+    alert(err.message || "Delete failed.");
+  }
+}
+
+async function exportPDF() {
+  await renderRecordQrCodes();
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  let y = 18;
+
+  doc.setFontSize(16);
+  doc.text("Instructor CE Records", 10, 10);
+
+  const records = Array.from(document.querySelectorAll(".record"));
+  records.forEach(recordEl => {
+    const rec = collectRecordForPdf(recordEl);
+
+    if (y > 230) {
+      doc.addPage();
+      y = 18;
+    }
+
+    if (rec.image) {
+      try {
+        doc.addImage(rec.image, "PNG", 10, y, 35, 35);
+      } catch (err) {
+        // If the image cannot be embedded, keep exporting the text record.
+      }
+    }
+
+    let textY = y + 4;
+    rec.lines.forEach(line => {
+      doc.setFontSize(10);
+      const wrapped = doc.splitTextToSize(line, 145);
+      wrapped.forEach(wrappedLine => {
+        doc.text(wrappedLine, 52, textY);
+        textY += 6;
+      });
+    });
+
+    y = Math.max(y + 42, textY + 6);
+  });
+
+  doc.save("Instructor_CE_Records.pdf");
+}
+
+function logout() {
+  clearSession();
+  document.getElementById("recordsBox").classList.add("hidden");
+  document.getElementById("loginBox").classList.remove("hidden");
+  document.getElementById("instPass").value = "";
+  document.getElementById("loginMsg").textContent = "";
+  document.getElementById("records").innerHTML = "<p>Loading student records...</p>";
+  document.getElementById("shiftTabs").innerHTML = "";
+  document.getElementById("shiftList").innerHTML = "";
+  document.getElementById("shiftStatus").textContent = "Loading shift QR codes...";
+}
+
+function escapeHtml(str) {
+  return String(str || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+window.addEventListener("load", () => {
+  const session = getSession();
+  if (session && session.username && session.password) {
+    document.getElementById("instUser").value = session.username || "";
+    document.getElementById("instPass").value = session.password || "";
+    loginInstructor();
+  }
+});
+</script>
+</body>
+</html>
