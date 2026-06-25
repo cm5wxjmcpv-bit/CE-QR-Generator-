@@ -111,8 +111,9 @@
   }
 
   #qrCode {
+    --qr-padding: clamp(8px, 1.6vmin, 18px);
     background: #ffffff;
-    padding: clamp(10px, 2vmin, 24px);
+    padding: var(--qr-padding);
     border-radius: 18px;
     box-shadow: 0 0 18px rgba(0, 0, 0, 0.65);
     display: flex;
@@ -203,15 +204,25 @@ function getQrSize() {
   const width = window.innerWidth || 800;
   const height = window.innerHeight || 600;
   const qrWrap = document.querySelector(".qr-wrap");
+  const qrHolder = document.getElementById("qrCode");
   const wrapWidth = qrWrap ? qrWrap.clientWidth : width;
   const wrapHeight = qrWrap ? qrWrap.clientHeight : height;
-  const isShortScreen = height < 650;
-  const maxQrSize = isShortScreen ? 320 : 440;
-  const paddingSpace = isShortScreen ? 28 : 48;
-  const availableWidth = Math.max(220, wrapWidth - paddingSpace);
-  const availableHeight = Math.max(220, wrapHeight - paddingSpace);
 
-  return Math.floor(Math.min(maxQrSize, availableWidth, availableHeight));
+  let holderPaddingX = 36;
+  let holderPaddingY = 36;
+
+  if (qrHolder) {
+    const styles = window.getComputedStyle(qrHolder);
+    holderPaddingX = parseFloat(styles.paddingLeft || 0) + parseFloat(styles.paddingRight || 0);
+    holderPaddingY = parseFloat(styles.paddingTop || 0) + parseFloat(styles.paddingBottom || 0);
+  }
+
+  const safetyGap = 10;
+  const availableWidth = Math.max(220, wrapWidth - holderPaddingX - safetyGap);
+  const availableHeight = Math.max(220, wrapHeight - holderPaddingY - safetyGap);
+  const size = Math.min(availableWidth, availableHeight);
+
+  return Math.floor(size);
 }
 
 function renderQr() {
