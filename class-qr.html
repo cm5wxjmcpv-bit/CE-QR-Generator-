@@ -54,13 +54,13 @@
     border: 1px solid rgba(255,255,255,0.12);
     border-radius: 18px;
     box-shadow: 0 0 28px rgba(0, 0, 0, 0.85);
-    display: grid;
-    grid-template-rows: auto auto auto minmax(0, 1fr) auto;
-    justify-items: center;
+    display: flex;
+    flex-direction: column;
     align-items: center;
+    justify-content: flex-start;
     text-align: center;
-    padding: clamp(10px, 2vmin, 22px);
-    gap: clamp(4px, 1vmin, 10px);
+    padding: clamp(10px, 1.8vmin, 22px);
+    gap: clamp(6px, 1.1vmin, 12px);
     animation: fadeIn 0.7s ease;
     overflow: hidden;
   }
@@ -70,9 +70,16 @@
     to { opacity: 1; transform: scale(1); }
   }
 
+  .top-area {
+    flex: 0 0 auto;
+    display: grid;
+    justify-items: center;
+    gap: clamp(4px, 0.8vmin, 9px);
+  }
+
   .logo {
-    width: clamp(58px, 9vmin, 92px);
-    height: clamp(58px, 9vmin, 92px);
+    width: clamp(58px, 8vmin, 84px);
+    height: clamp(58px, 8vmin, 84px);
     object-fit: cover;
     border-radius: 50%;
     box-shadow: 0 0 10px #ff4c4c;
@@ -82,36 +89,35 @@
     font-family: 'Oswald', sans-serif;
     color: #ff4c4c;
     margin: 0;
-    font-size: clamp(1.55rem, 4.4vmin, 3.7rem);
-    line-height: 1;
+    font-size: clamp(1.65rem, 4vmin, 3.4rem);
+    line-height: 0.98;
   }
 
   .instructions {
     color: #ffffff;
-    font-size: clamp(1rem, 3vmin, 2rem);
+    font-size: clamp(1rem, 2.7vmin, 1.85rem);
     font-weight: 700;
     margin: 0;
-    line-height: 1.15;
+    line-height: 1.1;
   }
 
-  .sub-instructions {
-    color: #f3d5d5;
-    font-size: clamp(0.85rem, 2vmin, 1.15rem);
-    margin: 0;
-    line-height: 1.2;
+  .sub-instructions,
+  .url-text {
+    display: none;
   }
 
   .qr-wrap {
-    width: 100%;
-    height: 100%;
+    flex: 1 1 auto;
     min-height: 0;
+    width: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
+    overflow: hidden;
   }
 
   #qrCode {
-    --qr-padding: clamp(8px, 1.6vmin, 18px);
+    --qr-padding: clamp(8px, 1.35vmin, 16px);
     background: #ffffff;
     padding: var(--qr-padding);
     border-radius: 18px;
@@ -121,18 +127,19 @@
     justify-content: center;
     max-width: 100%;
     max-height: 100%;
+    overflow: hidden;
+    flex: 0 0 auto;
   }
 
   #qrCode img,
   #qrCode canvas {
     display: block;
-    max-width: 100%;
-    max-height: 100%;
-    height: auto;
+    width: 100%;
+    height: 100%;
   }
 
-  .url-text {
-    display: none;
+  #message {
+    flex: 0 0 auto;
   }
 
   .error {
@@ -145,17 +152,21 @@
   }
 
   footer {
+    flex: 0 0 auto;
     color: #ff4c4c;
-    font-size: clamp(0.7rem, 1.6vmin, 0.9rem);
+    font-size: clamp(0.7rem, 1.45vmin, 0.9rem);
     line-height: 1.1;
   }
 
-  @media (max-height: 650px) {
+  @media (max-height: 700px) {
     .logo { display: none; }
-    .qr-card {
-      grid-template-rows: auto auto minmax(0, 1fr) auto;
-    }
-    .sub-instructions { display: none; }
+    h1 { font-size: clamp(1.45rem, 4vmin, 2.7rem); }
+    .instructions { font-size: clamp(0.95rem, 2.4vmin, 1.45rem); }
+  }
+
+  @media (max-height: 560px) {
+    .top-area { gap: 3px; }
+    .qr-card { gap: 5px; }
   }
 
   @media (max-width: 700px) {
@@ -174,13 +185,17 @@
 
   <main class="stage">
     <section class="qr-card" aria-label="Student sign-in QR code">
-      <img src="ABE9E472-6FA5-46E6-866D-992B713B5B5B.JPG" class="logo" alt="Martinsville Fire & EMS Logo">
-      <h1>Martinsville<br>Fire & EMS</h1>
-      <p class="instructions">Scan the QR code and enter your information.</p>
-      <p class="sub-instructions">Use your phone camera to open the CE attendance form.</p>
+      <div class="top-area">
+        <img src="ABE9E472-6FA5-46E6-866D-992B713B5B5B.JPG" class="logo" alt="Martinsville Fire & EMS Logo">
+        <h1>Martinsville<br>Fire & EMS</h1>
+        <p class="instructions">Scan the QR code and enter your information.</p>
+        <p class="sub-instructions">Use your phone camera to open the CE attendance form.</p>
+      </div>
+
       <div class="qr-wrap">
         <div id="qrCode" aria-label="QR code for student CE attendance form"></div>
       </div>
+
       <div id="urlText" class="url-text"></div>
       <div id="message"></div>
       <footer>© 2026 Martinsville Fire & EMS • CE Portal</footer>
@@ -200,29 +215,41 @@ function getStudentFormUrl() {
   return formUrl.toString();
 }
 
-function getQrSize() {
-  const width = window.innerWidth || 800;
-  const height = window.innerHeight || 600;
-  const qrWrap = document.querySelector(".qr-wrap");
+function getQrPadding() {
   const qrHolder = document.getElementById("qrCode");
-  const wrapWidth = qrWrap ? qrWrap.clientWidth : width;
-  const wrapHeight = qrWrap ? qrWrap.clientHeight : height;
+  const styles = window.getComputedStyle(qrHolder);
 
-  let holderPaddingX = 36;
-  let holderPaddingY = 36;
+  return {
+    x: parseFloat(styles.paddingLeft || 0) + parseFloat(styles.paddingRight || 0),
+    y: parseFloat(styles.paddingTop || 0) + parseFloat(styles.paddingBottom || 0)
+  };
+}
 
-  if (qrHolder) {
-    const styles = window.getComputedStyle(qrHolder);
-    holderPaddingX = parseFloat(styles.paddingLeft || 0) + parseFloat(styles.paddingRight || 0);
-    holderPaddingY = parseFloat(styles.paddingTop || 0) + parseFloat(styles.paddingBottom || 0);
+function getQrSize() {
+  const qrWrap = document.querySelector(".qr-wrap");
+  const card = document.querySelector(".qr-card");
+  const padding = getQrPadding();
+
+  const wrapRect = qrWrap.getBoundingClientRect();
+  const cardRect = card.getBoundingClientRect();
+
+  let availableWidth = wrapRect.width;
+  let availableHeight = wrapRect.height;
+
+  if (!availableHeight || availableHeight < 250) {
+    const cardStyles = window.getComputedStyle(card);
+    const cardPaddingY = parseFloat(cardStyles.paddingTop || 0) + parseFloat(cardStyles.paddingBottom || 0);
+    const cardGap = parseFloat(cardStyles.rowGap || cardStyles.gap || 0) || 0;
+    const fixedItems = Array.from(card.children).filter(el => !el.classList.contains("qr-wrap"));
+    const fixedHeight = fixedItems.reduce((sum, el) => sum + el.getBoundingClientRect().height, 0);
+    availableHeight = cardRect.height - cardPaddingY - fixedHeight - (cardGap * 4);
   }
 
-  const safetyGap = 10;
-  const availableWidth = Math.max(220, wrapWidth - holderPaddingX - safetyGap);
-  const availableHeight = Math.max(220, wrapHeight - holderPaddingY - safetyGap);
-  const size = Math.min(availableWidth, availableHeight);
+  const safetyGap = 4;
+  const maxInnerWidth = Math.max(180, availableWidth - padding.x - safetyGap);
+  const maxInnerHeight = Math.max(180, availableHeight - padding.y - safetyGap);
 
-  return Math.floor(size);
+  return Math.floor(Math.min(maxInnerWidth, maxInnerHeight));
 }
 
 function renderQr() {
@@ -231,10 +258,14 @@ function renderQr() {
   const message = document.getElementById("message");
   const studentFormUrl = getStudentFormUrl();
   const qrSize = getQrSize();
+  const padding = getQrPadding();
 
   qrHolder.innerHTML = "";
   message.innerHTML = "";
   urlText.textContent = studentFormUrl;
+
+  qrHolder.style.width = `${qrSize + padding.x}px`;
+  qrHolder.style.height = `${qrSize + padding.y}px`;
 
   try {
     new QRCode(qrHolder, {
@@ -250,18 +281,20 @@ function renderQr() {
   }
 }
 
-let resizeTimer = null;
-window.addEventListener("resize", () => {
-  clearTimeout(resizeTimer);
-  resizeTimer = setTimeout(renderQr, 200);
-});
+function scheduleRender(delay = 0) {
+  window.clearTimeout(window.ceQrResizeTimer);
+  window.ceQrResizeTimer = window.setTimeout(() => {
+    window.requestAnimationFrame(renderQr);
+  }, delay);
+}
 
-window.addEventListener("orientationchange", () => {
-  clearTimeout(resizeTimer);
-  resizeTimer = setTimeout(renderQr, 300);
+window.addEventListener("resize", () => scheduleRender(150));
+window.addEventListener("orientationchange", () => scheduleRender(300));
+window.addEventListener("load", () => {
+  window.requestAnimationFrame(() => {
+    window.requestAnimationFrame(renderQr);
+  });
 });
-
-window.addEventListener("load", renderQr);
 </script>
 </body>
 </html>
