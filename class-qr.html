@@ -8,15 +8,20 @@
 <style>
   * { box-sizing: border-box; }
 
+  html,
   body {
+    width: 100%;
+    height: 100%;
     margin: 0;
     padding: 0;
+    overflow: hidden;
+  }
+
+  body {
     font-family: 'Open Sans', sans-serif;
     background: url('ABE9E472-6FA5-46E6-866D-992B713B5B5B.JPG') no-repeat center center fixed;
     background-size: cover;
     color: white;
-    min-height: 100vh;
-    overflow-x: hidden;
   }
 
   .overlay {
@@ -29,27 +34,35 @@
   .stage {
     position: relative;
     z-index: 2;
-    min-height: 100vh;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 28px;
+    padding: clamp(8px, 1.5vmin, 18px);
+    overflow: hidden;
   }
 
   .qr-card {
-    width: min(94vw, 900px);
-    min-height: min(92vh, 860px);
+    width: min(96vw, 1050px);
+    height: calc(100vh - 20px);
+    height: calc(100dvh - 20px);
+    max-height: calc(100vh - 20px);
+    max-height: calc(100dvh - 20px);
     background: rgba(11, 28, 44, 0.94);
     border: 1px solid rgba(255,255,255,0.12);
     border-radius: 18px;
     box-shadow: 0 0 28px rgba(0, 0, 0, 0.85);
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+    justify-items: center;
     align-items: center;
-    justify-content: center;
     text-align: center;
-    padding: 28px;
+    padding: clamp(10px, 2vmin, 22px);
+    gap: clamp(4px, 1vmin, 10px);
     animation: fadeIn 0.7s ease;
+    overflow: hidden;
   }
 
   @keyframes fadeIn {
@@ -58,80 +71,100 @@
   }
 
   .logo {
-    width: 100px;
-    height: 100px;
+    width: clamp(58px, 9vmin, 92px);
+    height: clamp(58px, 9vmin, 92px);
     object-fit: cover;
     border-radius: 50%;
-    margin-bottom: 10px;
     box-shadow: 0 0 10px #ff4c4c;
   }
 
   h1 {
     font-family: 'Oswald', sans-serif;
     color: #ff4c4c;
-    margin: 0 0 8px;
-    font-size: clamp(2rem, 5vw, 4.2rem);
-    line-height: 1.05;
+    margin: 0;
+    font-size: clamp(1.55rem, 4.4vmin, 3.7rem);
+    line-height: 1;
   }
 
   .instructions {
     color: #ffffff;
-    font-size: clamp(1.35rem, 3vw, 2.4rem);
+    font-size: clamp(1rem, 3vmin, 2rem);
     font-weight: 700;
-    margin: 8px 0 22px;
+    margin: 0;
+    line-height: 1.15;
   }
 
   .sub-instructions {
     color: #f3d5d5;
-    font-size: clamp(1rem, 2vw, 1.35rem);
-    margin: -8px 0 24px;
+    font-size: clamp(0.85rem, 2vmin, 1.15rem);
+    margin: 0;
+    line-height: 1.2;
+  }
+
+  .qr-wrap {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   #qrCode {
     background: #ffffff;
-    padding: clamp(14px, 2.5vw, 28px);
+    padding: clamp(10px, 2vmin, 24px);
     border-radius: 18px;
     box-shadow: 0 0 18px rgba(0, 0, 0, 0.65);
     display: flex;
     align-items: center;
     justify-content: center;
-    max-width: 95%;
+    max-width: 100%;
+    max-height: 100%;
   }
 
   #qrCode img,
   #qrCode canvas {
     display: block;
     max-width: 100%;
+    max-height: 100%;
     height: auto;
   }
 
   .url-text {
-    max-width: 760px;
-    color: #f3d5d5;
-    font-size: clamp(0.9rem, 1.6vw, 1.1rem);
-    margin-top: 18px;
-    word-break: break-word;
+    display: none;
   }
 
   .error {
     color: #ffb0b0;
     background: rgba(255, 76, 76, 0.1);
     border: 1px solid #ff4c4c;
-    padding: 12px;
+    padding: 10px;
     border-radius: 8px;
-    margin-top: 14px;
+    margin: 0;
   }
 
   footer {
     color: #ff4c4c;
-    margin-top: 18px;
-    font-size: 0.9rem;
+    font-size: clamp(0.7rem, 1.6vmin, 0.9rem);
+    line-height: 1.1;
+  }
+
+  @media (max-height: 650px) {
+    .logo { display: none; }
+    .qr-card {
+      grid-template-rows: auto auto minmax(0, 1fr) auto;
+    }
+    .sub-instructions { display: none; }
   }
 
   @media (max-width: 700px) {
-    .stage { padding: 14px; }
-    .qr-card { min-height: 94vh; padding: 18px; }
-    .logo { width: 78px; height: 78px; }
+    .stage { padding: 8px; }
+    .qr-card {
+      width: calc(100vw - 16px);
+      height: calc(100dvh - 16px);
+      max-height: calc(100dvh - 16px);
+      border-radius: 14px;
+    }
   }
 </style>
 </head>
@@ -144,7 +177,9 @@
       <h1>Martinsville<br>Fire & EMS</h1>
       <p class="instructions">Scan the QR code and enter your information.</p>
       <p class="sub-instructions">Use your phone camera to open the CE attendance form.</p>
-      <div id="qrCode" aria-label="QR code for student CE attendance form"></div>
+      <div class="qr-wrap">
+        <div id="qrCode" aria-label="QR code for student CE attendance form"></div>
+      </div>
       <div id="urlText" class="url-text"></div>
       <div id="message"></div>
       <footer>© 2026 Martinsville Fire & EMS • CE Portal</footer>
@@ -165,8 +200,13 @@ function getStudentFormUrl() {
 }
 
 function getQrSize() {
-  const smallestSide = Math.min(window.innerWidth, window.innerHeight);
-  return Math.min(620, Math.max(280, Math.floor(smallestSide * 0.55)));
+  const width = window.innerWidth || 800;
+  const height = window.innerHeight || 600;
+  const isShortScreen = height < 650;
+  const reservedHeight = isShortScreen ? 150 : 245;
+  const availableHeight = Math.max(220, height - reservedHeight);
+  const availableWidth = Math.max(220, width - 90);
+  return Math.floor(Math.min(700, availableHeight, availableWidth));
 }
 
 function renderQr() {
@@ -198,6 +238,11 @@ let resizeTimer = null;
 window.addEventListener("resize", () => {
   clearTimeout(resizeTimer);
   resizeTimer = setTimeout(renderQr, 200);
+});
+
+window.addEventListener("orientationchange", () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(renderQr, 300);
 });
 
 window.addEventListener("load", renderQr);
