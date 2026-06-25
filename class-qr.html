@@ -202,11 +202,16 @@ function getStudentFormUrl() {
 function getQrSize() {
   const width = window.innerWidth || 800;
   const height = window.innerHeight || 600;
+  const qrWrap = document.querySelector(".qr-wrap");
+  const wrapWidth = qrWrap ? qrWrap.clientWidth : width;
+  const wrapHeight = qrWrap ? qrWrap.clientHeight : height;
   const isShortScreen = height < 650;
-  const reservedHeight = isShortScreen ? 150 : 245;
-  const availableHeight = Math.max(220, height - reservedHeight);
-  const availableWidth = Math.max(220, width - 90);
-  return Math.floor(Math.min(700, availableHeight, availableWidth));
+  const maxQrSize = isShortScreen ? 320 : 440;
+  const paddingSpace = isShortScreen ? 28 : 48;
+  const availableWidth = Math.max(220, wrapWidth - paddingSpace);
+  const availableHeight = Math.max(220, wrapHeight - paddingSpace);
+
+  return Math.floor(Math.min(maxQrSize, availableWidth, availableHeight));
 }
 
 function renderQr() {
